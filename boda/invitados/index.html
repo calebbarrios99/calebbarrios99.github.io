@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#f1eef6">
+<title>Invitados · Caleb &amp; Anyi</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f3b57'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23e6d8bd'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Montserrat:wght@300;400;500;600&display=swap">
+<style>
+/* Herramienta de los novios: una columna, formulario arriba y lista debajo. Misma paleta que la invitación. */
+:root{
+  --bg:#f1eef6; --paper:#fdfcff; --ink:#262a3b; --ink-soft:#6a6e86;
+  --navy:#2f3b57; --navy-light:#3c4b6e; --blue:#6f8fc7; --seal:#e6d8bd; --line:#cfd4e6;
+  --ok:#2f7a5b; --danger:#a8433f;
+  --script:"Allura","Snell Roundhand",cursive;
+  --body:"Montserrat","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1rem;line-height:1.5;padding-inline:16px;padding-block:calc(28px + env(safe-area-inset-top,0px)) calc(64px + env(safe-area-inset-bottom,0px))}
+main{max-width:560px;margin-inline:auto;display:flex;flex-direction:column;gap:24px}
+h1,h2,p{margin:0}
+header{text-align:center;display:flex;flex-direction:column;gap:2px}
+h1{font-family:var(--script);font-weight:400;font-size:3.2rem;line-height:1.1}
+.caps{text-transform:uppercase;letter-spacing:.16em;font-size:.68rem;font-weight:500;color:var(--ink-soft)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 10px 22px rgba(34,43,66,.08)}
+label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:500;min-width:0}
+label small{font-weight:400;color:var(--ink-soft)}
+input[type=text],input[type=tel],input[type=number],textarea{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;min-width:0}
+textarea{min-height:110px;resize:vertical;line-height:1.5}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stepper{display:grid;grid-template-columns:48px 1fr 48px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.stepper input{border:0;border-radius:0;text-align:center;font-variant-numeric:tabular-nums;padding-inline:4px;-moz-appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none}
+.stepper button{border:0;background:var(--bg);color:var(--navy);font-size:1.3rem;cursor:pointer}
+.btn{font:inherit;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;border-radius:999px;border:1px solid var(--navy);background:transparent;color:var(--navy);padding:11px 16px;cursor:pointer;text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.fill{background:var(--navy);color:var(--paper)}
+.btn.big{padding:15px 20px;font-size:.8rem}
+.btn:hover{background:var(--navy-light);border-color:var(--navy-light);color:var(--paper)}
+.btn.ghost{border-color:var(--line);color:var(--ink-soft)}
+.btn.ghost:hover{background:var(--bg);color:var(--ink);border-color:var(--ink-soft)}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400;font-size:.88rem}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--navy);flex:none}
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-size:.82rem;font-weight:500;color:var(--navy)}
+details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+.hint{font-size:.8rem;color:var(--ink-soft)}
+.err{font-size:.82rem;color:var(--danger)}
+.totals{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}
+.totals h2{font-family:var(--script);font-weight:400;font-size:2.2rem;line-height:1}
+.totals p{font-size:.84rem;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+#list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.guest{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.guest.sent{border-color:var(--ok)}
+.guest .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.guest .name{font-weight:600;font-size:1.05rem;overflow-wrap:anywhere;min-width:0}
+.guest .seats{font-size:.82rem;color:var(--ink-soft);white-space:nowrap}
+.guest .link{font-size:.76rem;color:var(--navy);background:var(--bg);border-radius:8px;padding:9px 11px;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
+.guest .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.empty{text-align:center;color:var(--ink-soft);font-size:.9rem;padding:26px 16px;border:1px dashed var(--line);border-radius:14px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;font-size:.84rem;padding:11px 18px;border-radius:999px;box-shadow:0 8px 18px rgba(34,43,66,.3);max-width:calc(100% - 32px);text-align:center;z-index:10}
+@media (max-width:420px){.row{grid-template-columns:1fr}.btn{padding-inline:10px;letter-spacing:.08em}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Invitados</h1>
+    <p class="caps">Caleb &amp; Anyi · enlaces de invitación</p>
+  </header>
+
+  <form class="card" id="form" novalidate>
+    <label for="nombre">Nombre del invitado
+      <input type="text" id="nombre" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Luciana Pérez" required>
+    </label>
+    <div class="row">
+      <label for="cupos">Cupos
+        <span class="stepper">
+          <button type="button" id="menos" aria-label="Un cupo menos">−</button>
+          <input type="number" id="cupos" inputmode="numeric" min="1" max="20" value="1">
+          <button type="button" id="mas" aria-label="Un cupo más">+</button>
+        </span>
+      </label>
+      <label for="cel">WhatsApp <small>(opcional)</small>
+        <input type="tel" id="cel" autocomplete="off" inputmode="tel" placeholder="300 123 4567">
+      </label>
+    </div>
+    <p class="err" id="err" role="alert" hidden></p>
+    <button class="btn fill big" type="submit">Crear invitación</button>
+
+    <details>
+      <summary>Opciones del enlace y del mensaje</summary>
+      <div>
+        <label class="check" for="auto">
+          <input type="checkbox" id="auto">
+          <span>Abrir el sobre automáticamente al entrar.<br><span class="hint">Sin marcar, el invitado toca el sello y la canción empieza con ese toque. Es lo recomendado.</span></span>
+        </label>
+        <label for="msg">Mensaje de WhatsApp
+          <textarea id="msg"></textarea>
+          <small>Usa {nombre} y {enlace}. Deja el enlace al final para que WhatsApp muestre la vista previa.</small>
+        </label>
+        <button class="btn ghost" type="button" id="resetMsg">Restaurar mensaje original</button>
+      </div>
+    </details>
+  </form>
+
+  <section aria-labelledby="listTitle" style="display:flex;flex-direction:column;gap:14px">
+    <div class="totals">
+      <h2 id="listTitle">Lista</h2>
+      <p id="totals"></p>
+    </div>
+    <ul id="list"></ul>
+    <p class="empty" id="empty">Aún no hay invitados. Escribe un nombre y sus cupos para crear el primer enlace.</p>
+    <p class="hint">La lista se guarda solo en este navegador. Si cambias de teléfono o borras los datos del navegador, no aparecerá; los enlaces ya enviados siguen funcionando.</p>
+    <button class="btn ghost" type="button" id="copyAll" hidden>Copiar toda la lista</button>
+  </section>
+</main>
+<p id="toast" role="status" hidden></p>
+
+<script>
+const BASE = new URL("../", location.href).href;          // la invitación vive una carpeta arriba
+const KEY = "boda-invitados", KEY_OPT = "boda-invitados-opciones";
+const MSG_DEFAULT = "Hola {nombre}, con mucha alegría te invitamos a nuestra boda. Abre tu invitación aquí:\n{enlace}";
+const $ = id => document.getElementById(id);
+
+// ---- Guardado local (puede no estar disponible: la página funciona igual, sin recordar) ----
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let guests = load(KEY, []); if (!Array.isArray(guests)) guests = [];
+const opt = Object.assign({auto: false, msg: MSG_DEFAULT}, load(KEY_OPT, {}));
+
+// ---- Enlace corto: Luciana Pérez, 2 cupos  ->  ?para=Luciana_Perez&cupos=2&t=9 ----
+// Las tildes viajan aparte en "t" (posición de la letra y tipo) para que el enlace se lea limpio.
+const TYPE = {"́": "", "̃": "n", "̈": "u", "̀": "g", "̂": "c", "̧": "d"};
+function linkFor(name, seats, auto){
+  const out = [], marks = [];
+  for (const ch of Array.from(name.normalize("NFD"))) {
+    if (/[̀-ͯ]/.test(ch)) { if (ch in TYPE && out.length) marks.push((out.length - 1) + TYPE[ch]); }
+    else out.push(ch === " " ? "_" : ch);
+  }
+  let url = BASE + "?para=" + encodeURIComponent(out.join("")) + "&cupos=" + seats;
+  if (marks.length) url += "&t=" + marks.join(".");
+  if (auto) url += "&abierto=1";
+  return url;
+}
+const phoneFor = cel => {
+  let d = (cel || "").replace(/\D/g, "");
+  if (d.length === 10 && d[0] === "3") d = "57" + d;      // celular colombiano sin indicativo
+  return d;
+};
+const messageFor = g => (opt.msg || MSG_DEFAULT).replace(/\{nombre\}/g, g.nombre).replace(/\{enlace\}/g, linkFor(g.nombre, g.cupos, opt.auto));
+const waFor = g => "https://wa.me/" + phoneFor(g.cel) + "?text=" + encodeURIComponent(messageFor(g));
+
+// ---- Avisos y copiado ----
+let toastTimer;
+function toast(t){ const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2200); }
+async function copy(text, okMsg){
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {}
+    ta.remove(); toast(ok ? okMsg : "No se pudo copiar. Mantén pulsado el enlace para copiarlo.");
+  }
+}
+
+// ---- Lista ----
+function el(tag, cls, text){ const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function render(){
+  const list = $("list"); list.textContent = "";
+  for (const g of guests) {
+    const li = el("li", "guest" + (g.enviado ? " sent" : ""));
+    const top = el("div", "top");
+    top.append(el("span", "name", g.nombre), el("span", "seats", g.cupos === 1 ? "1 cupo" : g.cupos + " cupos"));
+    const url = linkFor(g.nombre, g.cupos, opt.auto);
+    const acts = el("div", "acts");
+    const bCopy = el("button", "btn", "Copiar enlace"); bCopy.type = "button";
+    bCopy.onclick = () => copy(url, "Enlace copiado");
+    const bWa = el("a", "btn fill", "WhatsApp"); bWa.href = waFor(g); bWa.target = "_blank"; bWa.rel = "noopener";
+    const bSent = el("button", "btn" + (g.enviado ? " on" : " ghost"), g.enviado ? "Enviada" : "Marcar enviada"); bSent.type = "button";
+    bSent.setAttribute("aria-pressed", g.enviado ? "true" : "false");
+    bSent.onclick = () => { g.enviado = !g.enviado; save(KEY, guests); render(); };
+    const bDel = el("button", "btn ghost", "Quitar"); bDel.type = "button";
+    bDel.onclick = () => {                                   // confirmación en dos toques, sin diálogos
+      if (bDel.dataset.sure) { guests = guests.filter(x => x.id !== g.id); save(KEY, guests); render(); toast("Invitado quitado"); return; }
+      bDel.dataset.sure = "1"; bDel.textContent = "¿Seguro? Quitar"; bDel.className = "btn danger";
+      setTimeout(() => { if (bDel.isConnected) { delete bDel.dataset.sure; bDel.textContent = "Quitar"; bDel.className = "btn ghost"; } }, 3000);
+    };
+    acts.append(bCopy, bWa, bSent, bDel);
+    li.append(top, el("div", "link", url), acts);
+    list.append(li);
+  }
+  const seats = guests.reduce((a, g) => a + g.cupos, 0), sent = guests.filter(g => g.enviado).length;
+  $("totals").textContent = guests.length ? `${guests.length} ${guests.length === 1 ? "invitación" : "invitaciones"} · ${seats} ${seats === 1 ? "cupo" : "cupos"} · ${sent} ${sent === 1 ? "enviada" : "enviadas"}` : "";
+  $("empty").hidden = guests.length > 0;
+  $("copyAll").hidden = guests.length === 0;
+}
+
+// ---- Formulario ----
+const clamp = n => Math.min(20, Math.max(1, parseInt(n, 10) || 1));
+$("menos").onclick = () => { $("cupos").value = clamp(+$("cupos").value - 1); };
+$("mas").onclick = () => { $("cupos").value = clamp(+$("cupos").value + 1); };
+$("cupos").onblur = () => { $("cupos").value = clamp($("cupos").value); };
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const nombre = $("nombre").value.replace(/\s+/g, " ").trim(), err = $("err");
+  if (!nombre) { err.textContent = "Escribe el nombre del invitado."; err.hidden = false; $("nombre").focus(); return; }
+  if (guests.some(g => g.nombre.toLowerCase() === nombre.toLowerCase())) { err.textContent = "Ya hay una invitación para " + nombre + ". Quítala de la lista si quieres crearla de nuevo."; err.hidden = false; $("nombre").focus(); return; }
+  err.hidden = true;
+  guests.unshift({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nombre, cupos: clamp($("cupos").value), cel: $("cel").value.trim(), enviado: false});
+  save(KEY, guests); render();
+  $("nombre").value = ""; $("cel").value = ""; $("cupos").value = 1; $("nombre").focus();
+  toast("Invitación creada para " + nombre);
+});
+
+// ---- Opciones ----
+$("auto").checked = !!opt.auto; $("msg").value = opt.msg;
+$("auto").onchange = () => { opt.auto = $("auto").checked; save(KEY_OPT, opt); render(); };
+$("msg").oninput = () => { opt.msg = $("msg").value; save(KEY_OPT, opt); render(); };
+$("resetMsg").onclick = () => { opt.msg = MSG_DEFAULT; $("msg").value = MSG_DEFAULT; save(KEY_OPT, opt); render(); toast("Mensaje restaurado"); };
+$("copyAll").onclick = () => copy(guests.map(g => `${g.nombre} (${g.cupos}): ${linkFor(g.nombre, g.cupos, opt.auto)}`).join("\n"), "Lista copiada");
+
+render();
+</script>
+</body>
+</html>

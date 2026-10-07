@@ -5,12 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f1eef6">
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="Tenemos el honor de invitarte a nuestra boda. Abre el sobre para ver los detalles.">
+<meta name="description" content="Jueves 19 de noviembre de 2026. Toca para abrir tu invitación.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Caleb &amp; Anyi · Nuestra boda">
-<meta property="og:description" content="Tenemos el honor de invitarte a nuestra boda. Abre el sobre para ver los detalles.">
-<meta property="og:image" content="https://calebbarrios99.github.io/boda/og.jpg">
+<meta property="og:site_name" content="Caleb &amp; Anyi">
+<meta property="og:title" content="Caleb &amp; Anyi · ¡Nos casamos!">
+<meta property="og:description" content="Jueves 19 de noviembre de 2026. Toca para abrir tu invitación.">
+<meta property="og:image" content="https://calebbarrios99.github.io/boda/invitacion.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Sobre azul con sello, invitación de boda de Caleb y Anyi">
 <meta property="og:url" content="https://calebbarrios99.github.io/boda/">
+<meta property="og:locale" content="es_CO">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f3b57'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23e6d8bd'/%3E%3C/svg%3E">
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Caleb &amp; Anyi · Nuestra boda</title>
@@ -312,7 +319,23 @@ const main = document.getElementById("main"), env = document.getElementById("env
 // El enlace del PDF trae el invitado, sus cupos y la orden de abrir el sobre:
 //   ?para=Nombre+Apellido&cupos=2&abierto=1
 const q = new URLSearchParams(location.search);
-const GUEST = (q.get("para") || "").trim().slice(0, 60);
+// Forma corta del nombre: guiones bajos en vez de espacios y, aparte, las tildes en "t"
+// (posición de la letra y tipo), para que el enlace se lea limpio: ?para=Luciana_Perez&cupos=2&t=9
+function guestName(){
+  let n = (q.get("para") || "").replace(/_/g, " ").trim().slice(0, 60);
+  const t = q.get("t");
+  if (!n || !t) return n;
+  try {
+    const MARK = {"": "\u0301", a: "\u0301", n: "\u0303", u: "\u0308", g: "\u0300", c: "\u0302", d: "\u0327"};
+    const ch = Array.from(n);
+    for (const tok of t.split(".")) {
+      const m = /^(\d+)([a-z]?)$/.exec(tok);
+      if (m && ch[+m[1]] && MARK[m[2]]) ch[+m[1]] += MARK[m[2]];
+    }
+    return ch.join("").normalize("NFC");
+  } catch (e) { return n; }
+}
+const GUEST = guestName();
 const SEATS = Math.min(Math.max(parseInt(q.get("cupos"), 10) || 0, 0), 20);
 // El sobre se abre solo únicamente al llegar desde el PDF. Se quita "abierto" de la dirección
 // para que, al recargar, el sobre vuelva a estar cerrado y haya que tocarlo.
