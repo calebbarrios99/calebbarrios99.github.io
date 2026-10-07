@@ -266,7 +266,7 @@ h1,h2,p{margin:0}
         <div class="clock"><span id="cur">0:00</span><span id="dur">3:54</span></div>
         <p class="status" id="status" role="status" hidden>No pudimos reproducir la canción aquí. <a href="https://youtu.be/KAYS-lM2ZNs" target="_blank" rel="noopener">Escúchala en YouTube</a></p>
       </div>
-      <audio id="au" preload="none" playsinline></audio>
+      <audio id="au" preload="metadata" playsinline src="contigo.mp3"></audio>
     </section>
 
     <section class="block" aria-label="Cuenta regresiva">
@@ -315,82 +315,21 @@ env.addEventListener("click", () => {
   env.setAttribute("aria-label", "Sobre abierto");
   fab.hidden = false;
   start();
-  setTimeout(() => { if (!started && !wanted && statusEl.hidden) nudge(true); }, 2500);
+  setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);
   const calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
   setTimeout(() => document.querySelector(".env-wrap").scrollIntoView({behavior: calm ? "auto" : "smooth", block: "start"}), calm ? 0 : 950);
 });
 
-// Reproductor de "Nuestra canción"
-// Dos motores para la misma canción: la etiqueta <audio> y, si el navegador o el visor no la dejan sonar
-// (pasa en Safari), Web Audio, que reproduce el archivo ya descargado sin depender de <audio>.
+// Reproductor de "Nuestra canción": la etiqueta <audio> del navegador con controles propios.
 const au = document.getElementById("au"), fab = document.getElementById("fab"), toggle = document.getElementById("toggle"),
       seek = document.getElementById("seek"), song = document.getElementById("song"), statusEl = document.getElementById("status");
-const FILE = "contigo.mp3", LEN = 234;
-let wanted = false, started = false, engine = "", failedSrc = null;
-au.muted = false; au.volume = 1;
+const LEN = 234;   // duración en segundos, hasta que el navegador informe la real
+let started = false;
 const mmss = t => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
 const nudge = on => fab.classList.toggle("nudge", on);
 const loading = on => { toggle.classList.toggle("loading", on); fab.classList.toggle("loading", on); };
-
-// Los bytes de la canción se bajan al abrir la página.
-let bytes = null, bytesState = "pending";
-const bytesReady = fetch(FILE)
-  .then(res => { if (!res.ok) throw new Error("http " + res.status); return res.arrayBuffer(); })
-  .then(buf => { bytes = buf; bytesState = "ready"; }, () => { bytesState = "failed"; });
-
-// ---- Motor Web Audio ----
-let ctx = null, pcm = null, node = null, waOn = false, waOffset = 0, waT0 = 0, decoding = null, waRun = 0;
-function unlock(){                       // se llama dentro de un toque: deja el audio habilitado
-  try {
-    if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); }
-    if (ctx.state !== "running") { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
-    const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);
-  } catch (e) {}
-}
-function decode(){
-  if (!decoding) decoding = new Promise((ok, no) => {
-    const p = ctx.decodeAudioData(bytes.slice(0), ok, no);
-    if (p && p.catch) p.catch(no);
-  }).then(b => { pcm = b; });
-  return decoding;
-}
-function waStart(){
-  if (waOn) return;
-  if (waOffset >= pcm.duration - .2) waOffset = 0;
-  const me = node = ctx.createBufferSource();
-  me.buffer = pcm; me.connect(ctx.destination);
-  me.onended = () => { if (node === me && waOn) { waOn = false; node = null; waOffset = 0; wanted = false; paint(); progress(); } };
-  me.start(0, waOffset); waT0 = ctx.currentTime - waOffset; waOn = true;
-  started = true; loading(false); nudge(false); paint();
-}
-function waStop(){
-  if (!waOn) return;
-  waOffset = Math.min(ctx.currentTime - waT0, pcm.duration); waOn = false;
-  const n = node; node = null;
-  try { n.onended = null; n.stop(); } catch (e) {}
-  paint();
-}
-async function useWA(){
-  engine = "wa";
-  const run = ++waRun;
-  try { au.pause(); au.removeAttribute("src"); au.load(); } catch (e) {}
-  if (!ctx) unlock();
-  if (!ctx || !bytes) return fail();
-  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}   // iPhone: sonar también en modo silencio
-  try { await decode(); } catch (e) { return fail(); }
-  if (run !== waRun || !wanted) return;
-  if (ctx.state !== "running") { try { await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 800))]); } catch (e) {} }
-  if (run !== waRun || !wanted) return;
-  if (ctx.state !== "running") { wanted = false; loading(false); nudge(true); paint(); return; }   // falta un toque
-  waStart();
-}
-
-// ---- Estado común ----
-const isOn = () => engine === "wa" ? waOn : !au.paused;
-const curT = () => engine === "wa" ? (waOn ? Math.min(ctx.currentTime - waT0, pcm.duration) : waOffset) : au.currentTime;
-const durT = () => engine === "wa" && pcm ? pcm.duration : (isFinite(au.duration) && au.duration ? au.duration : LEN);
 function paint(){
-  const on = isOn();
+  const on = !au.paused;
   song.classList.toggle("playing", on);
   for (const b of [toggle, fab]) {
     b.querySelector(".i-play").toggleAttribute("hidden", on);
@@ -399,83 +338,36 @@ function paint(){
   }
 }
 function progress(){
-  const d = durT(), t = curT();
+  const d = isFinite(au.duration) && au.duration ? au.duration : LEN, t = au.currentTime;
   seek.max = Math.round(d); seek.value = t;
   seek.style.setProperty("--p", (t / d * 100) + "%");
   document.getElementById("cur").textContent = mmss(t);
   document.getElementById("dur").textContent = mmss(d);
 }
-function fail(){
-  wanted = false; waRun++; loading(false); nudge(false);
-  try { au.pause(); } catch (e) {}
-  statusEl.hidden = false; paint();
-}
-
-// ---- Motor <audio> ----
-let blobUrl = null, blobTried = false, directTried = false;
-function nextSource(){
-  if (bytes && !blobTried) {
-    blobTried = true;
-    blobUrl = URL.createObjectURL(new Blob([bytes], {type: "audio/mpeg"}));
-    au.src = blobUrl; au.load(); return true;
-  }
-  if (!bytes && !directTried) { directTried = true; au.src = FILE; au.load(); return true; }
-  return false;
-}
-function next(){                         // <audio> falló con la fuente actual
-  if (engine !== "el") return;
-  const cur = au.getAttribute("src");
-  if (!cur || cur === failedSrc) return; // el mismo fallo llega dos veces (evento y promesa)
-  failedSrc = cur;
-  if (bytesState === "pending") { if (wanted) loading(true); bytesReady.then(afterFail); return; }
-  afterFail();
-}
-function afterFail(){
-  if (engine !== "el") return;
-  if (bytes) return useWA();
-  if (nextSource()) { if (wanted) start(); return; }
-  fail();
-}
+function fail(){ loading(false); nudge(false); statusEl.hidden = false; paint(); }
 function start(){
-  wanted = true; statusEl.hidden = true; loading(true);
-  unlock();
-  if (engine === "wa") return useWA();
-  engine = "el";
-  if (!au.getAttribute("src") && !nextSource()) return fail();
-  let p;
-  try { p = au.play(); } catch (e) { return next(); }
+  statusEl.hidden = true; loading(true);
+  const p = au.play();
   if (p && p.catch) p.catch(err => {
     const name = err && err.name;
-    if (name === "AbortError" || engine !== "el") return;   // se pausó o se cambió la fuente mientras arrancaba
-    if (name === "NotAllowedError") { wanted = false; loading(false); nudge(true); paint(); }   // el navegador pide un toque más
-    else next();
+    if (name === "AbortError") return;                              // se pausó mientras arrancaba
+    loading(false);
+    if (name === "NotAllowedError") { nudge(true); paint(); }       // el navegador pide un toque más
+    else fail();
   });
 }
-function stop(){
-  wanted = false; waRun++; loading(false);
-  if (engine === "wa") waStop(); else au.pause();
-  paint();
+function flip(){
+  nudge(false);
+  if (au.paused) start(); else { loading(false); au.pause(); }
 }
-function flip(){ nudge(false); if (wanted || isOn()) stop(); else start(); }
-
 toggle.addEventListener("click", flip); fab.addEventListener("click", flip);
-seek.addEventListener("input", () => {
-  const v = +seek.value;
-  if (engine === "wa" && pcm) { const was = waOn; if (was) waStop(); waOffset = v; if (was) waStart(); }
-  else { try { au.currentTime = v; } catch (e) {} }
-  progress();
-});
-au.addEventListener("playing", () => {
-  if (engine !== "el") return;
-  started = true; loading(false); nudge(false); paint();
-  if (ctx && ctx.state === "running") ctx.suspend().catch(() => {});
-});
-au.addEventListener("waiting", () => { if (engine === "el" && !au.paused) loading(true); });
-au.addEventListener("ended", () => { if (engine !== "el") return; wanted = false; au.currentTime = 0; paint(); progress(); });
+seek.addEventListener("input", () => { au.currentTime = +seek.value; progress(); });
+au.addEventListener("playing", () => { started = true; loading(false); nudge(false); paint(); });
+au.addEventListener("waiting", () => { if (!au.paused) loading(true); });
+au.addEventListener("ended", () => { au.currentTime = 0; paint(); progress(); });
 for (const e of ["play", "pause"]) au.addEventListener(e, paint);
-for (const e of ["timeupdate", "loadedmetadata"]) au.addEventListener(e, () => { if (engine !== "wa") progress(); });
-au.addEventListener("error", next);
-setInterval(() => { if (engine === "wa" && waOn) progress(); }, 500);
+for (const e of ["timeupdate", "loadedmetadata"]) au.addEventListener(e, progress);
+au.addEventListener("error", fail);
 
 function tick(){
   const ms = Math.max(0, FECHA - Date.now());
