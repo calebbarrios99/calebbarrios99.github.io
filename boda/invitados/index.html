@@ -57,8 +57,6 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,
 .btn.danger{border-color:var(--danger);color:var(--danger)}
 .btn.danger:hover{background:var(--danger);color:#fff}
 .btn.on{background:var(--ok);border-color:var(--ok);color:#fff}
-.check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400;font-size:.88rem}
-.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--navy);flex:none}
 details{border-top:1px solid var(--line);padding-top:14px}
 summary{cursor:pointer;font-size:.82rem;font-weight:500;color:var(--navy)}
 details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
@@ -118,12 +116,8 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
     <button class="btn fill big" type="submit">Crear invitación</button>
 
     <details>
-      <summary>Opciones del enlace y del mensaje</summary>
+      <summary>Mensajes de invitación</summary>
       <div>
-        <label class="check" for="auto">
-          <input type="checkbox" id="auto">
-          <span>Abrir el sobre automáticamente al entrar.<br><span class="hint">Sin marcar, el invitado toca el sello y la canción empieza con ese toque. Es lo recomendado.</span></span>
-        </label>
         <label for="msgF">Mensaje de WhatsApp para familias
           <textarea id="msgF"></textarea>
         </label>
@@ -253,44 +247,25 @@ const INV = (() => {
     } catch (e) { return null; }
   }
 
-  // --- Formato anterior (?i=...), para que los enlaces ya enviados sigan abriendo ---
-  function decodeOld(tok){
-    try {
-      if (!/^[A-Za-z0-9_-]{8,160}$/.test(tok || "")) return null;
-      const u = Array.from(atob(tok.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-      if (u.length < 6) return null;
-      const salt = u[0], ks = stream([salt], u.length - 1), body = u.slice(1).map((v, i) => v ^ ks[i]);
-      const plain = body.slice(0, -3), c = fnv(K.concat([salt], plain)), sum = [c & 255, (c >>> 8) & 255, (c >>> 16) & 255];
-      for (let i = 0; i < 3; i++) if (body[plain.length + i] !== sum[i]) return null;
-      const cupos = plain[0] & 31, nombre = new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
-      if (!cupos || !nombre.trim()) return null;
-      return {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
-    } catch (e) { return null; }
-  }
-  return {encode, decode, decodeOld};
+  return {encode, decode};
 })();
 if (typeof module !== "undefined") module.exports = INV;
 
 
 const BASE = new URL("../", location.href).href;          // la invitación vive una carpeta arriba
-const KEY = "boda-invitados", KEY_OPT = "boda-invitados-opciones";
+const KEY = "boda-invitados", KEY_OPT = "boda-invitados-mensajes";
 const MSG_F = "¡Hola, familia {nombre}! 💌\n\nTenemos una noticia que nos hace muy felices: ¡nos casamos! Y no imaginamos ese día sin ustedes.\n\nLes preparamos una invitación especial. Ábranla aquí, con el volumen arriba:\n{enlace}\n\nCon cariño,\nCaleb y Anyi";
 const MSG_P = "¡Hola, {nombre}! 💌\n\nTenemos una noticia que nos hace muy felices: ¡nos casamos! Y no imaginamos ese día sin ti.\n\nTe preparamos una invitación especial. Ábrela aquí, con el volumen arriba:\n{enlace}\n\nCon cariño,\nCaleb y Anyi";
-// Textos originales anteriores: si quedaron guardados sin editar, se cambian por los nuevos.
-const MSG_OLD = ["Hola, familia {nombre}. Con mucha alegría los invitamos a nuestra boda. Abran su invitación aquí:\n{enlace}", "Hola, {nombre}. Con mucha alegría te invitamos a nuestra boda. Abre tu invitación aquí:\n{enlace}"];
 const $ = id => document.getElementById(id);
 
 // ---- Guardado local (puede no estar disponible: la página funciona igual, sin recordar) ----
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 let guests = load(KEY, []); if (!Array.isArray(guests)) guests = [];
-for (const g of guests) if (g.tipo !== "f") g.tipo = "p";   // invitados creados antes de existir el tipo
-const opt = Object.assign({auto: false, msgF: MSG_F, msgP: MSG_P}, load(KEY_OPT, {}));
-if (MSG_OLD.includes(opt.msgF)) opt.msgF = MSG_F;
-if (MSG_OLD.includes(opt.msgP)) opt.msgP = MSG_P;
+const opt = Object.assign({msgF: MSG_F, msgP: MSG_P}, load(KEY_OPT, {}));
 
 // ---- Enlace: un código corto que no se puede leer ni editar a mano ----
-const linkFor = (g, auto) => BASE + "?" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos}) + (auto ? "&abierto=1" : "");
+const linkFor = g => BASE + "?" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos});
 const shown = g => g.tipo === "f" ? "Familia " + g.nombre : g.nombre;
 const phoneFor = cel => {
   let d = (cel || "").replace(/\D/g, "");
@@ -298,7 +273,7 @@ const phoneFor = cel => {
   return d;
 };
 const messageFor = g => ((g.tipo === "f" ? opt.msgF : opt.msgP) || (g.tipo === "f" ? MSG_F : MSG_P))
-  .replace(/\{nombre\}/g, g.nombre).replace(/\{enlace\}/g, linkFor(g, opt.auto));
+  .replace(/\{nombre\}/g, g.nombre).replace(/\{enlace\}/g, linkFor(g));
 const waFor = g => "https://wa.me/" + phoneFor(g.cel) + "?text=" + encodeURIComponent(messageFor(g));
 
 // ---- Avisos y copiado ----
@@ -323,7 +298,7 @@ function render(){
     const top = el("div", "top"), who = el("span", "name");
     who.append(el("span", "kind", g.tipo === "f" ? "Familia" : "Persona"), g.nombre);
     top.append(who, el("span", "seats", g.cupos === 1 ? "1 cupo" : g.cupos + " cupos"));
-    const url = linkFor(g, opt.auto);
+    const url = linkFor(g);
     const acts = el("div", "acts");
     const bCopy = el("button", "btn", "Copiar enlace"); bCopy.type = "button";
     bCopy.onclick = () => copy(url, "Enlace copiado");
@@ -378,13 +353,12 @@ $("form").addEventListener("submit", e => {
   toast("Invitación creada para " + shown({tipo: t, nombre}));
 });
 
-// ---- Opciones ----
-$("auto").checked = !!opt.auto; $("msgF").value = opt.msgF; $("msgP").value = opt.msgP;
-$("auto").onchange = () => { opt.auto = $("auto").checked; save(KEY_OPT, opt); render(); };
+// ---- Mensajes ----
+$("msgF").value = opt.msgF; $("msgP").value = opt.msgP;
 $("msgF").oninput = () => { opt.msgF = $("msgF").value; save(KEY_OPT, opt); render(); };
 $("msgP").oninput = () => { opt.msgP = $("msgP").value; save(KEY_OPT, opt); render(); };
 $("resetMsg").onclick = () => { opt.msgF = MSG_F; opt.msgP = MSG_P; $("msgF").value = MSG_F; $("msgP").value = MSG_P; save(KEY_OPT, opt); render(); toast("Mensajes restaurados"); };
-$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${g.cupos}): ${linkFor(g, opt.auto)}`).join("\n"), "Lista copiada");
+$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${g.cupos}): ${linkFor(g)}`).join("\n"), "Lista copiada");
 
 // ---- Exportar e importar la lista (un archivo .json que se puede guardar o enviar) ----
 $("exportBtn").onclick = async () => {

@@ -414,42 +414,17 @@ const INV = (() => {
     } catch (e) { return null; }
   }
 
-  // --- Formato anterior (?i=...), para que los enlaces ya enviados sigan abriendo ---
-  function decodeOld(tok){
-    try {
-      if (!/^[A-Za-z0-9_-]{8,160}$/.test(tok || "")) return null;
-      const u = Array.from(atob(tok.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-      if (u.length < 6) return null;
-      const salt = u[0], ks = stream([salt], u.length - 1), body = u.slice(1).map((v, i) => v ^ ks[i]);
-      const plain = body.slice(0, -3), c = fnv(K.concat([salt], plain)), sum = [c & 255, (c >>> 8) & 255, (c >>> 16) & 255];
-      for (let i = 0; i < 3; i++) if (body[plain.length + i] !== sum[i]) return null;
-      const cupos = plain[0] & 31, nombre = new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
-      if (!cupos || !nombre.trim()) return null;
-      return {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
-    } catch (e) { return null; }
-  }
-  return {encode, decode, decodeOld};
+  return {encode, decode};
 })();
 if (typeof module !== "undefined") module.exports = INV;
 
 
-// El enlace de cada invitación trae un código: .../boda/?CODIGO  (y, si viene del PDF, &abierto=1).
-// El código guarda si es familia o persona, el nombre y los cupos. También se aceptan los
-// enlaces del formato anterior (?i=CODIGO), para que los ya enviados sigan abriendo.
-const q = new URLSearchParams(location.search);
-const parts = location.search.slice(1).split("&").filter(Boolean);
-const bare = parts.find(p => p.indexOf("=") < 0 && p !== "abierto");
-const INVITE = (bare && INV.decode(bare)) || INV.decodeOld(q.get("i"));
+// El enlace de cada invitación trae un código: .../boda/?CODIGO
+// El código guarda si es familia o persona, el nombre y los cupos.
+const INVITE = INV.decode(location.search.slice(1).split("&")[0]);
 const FAM = !!INVITE && INVITE.tipo === "f";
 const GUEST = INVITE ? (FAM ? "Familia " + INVITE.nombre : INVITE.nombre) : "";
 const SEATS = INVITE ? INVITE.cupos : 0;
-// El sobre se abre solo únicamente al llegar desde el PDF. Se quita "abierto" de la dirección
-// para que, al recargar, el sobre vuelva a estar cerrado y haya que tocarlo.
-const nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
-const AUTO = q.has("abierto") && !(nav && nav.type === "reload");
-if (q.has("abierto")) {
-  try { const rest = parts.filter(p => p.split("=")[0] !== "abierto").join("&"); history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash); } catch (e) {}
-}
 const WHATSAPP = "573022144211";   // aquí llegan las confirmaciones
 const DEADLINE = "1 de noviembre de 2026";
 (function fillGuest(){
@@ -480,40 +455,18 @@ const DEADLINE = "1 de noviembre de 2026";
   }
 })();
 
-function openEnvelope(byTap){
+// Al tocar el sello: se abre el sobre y, con ese mismo toque, empieza la canción.
+env.addEventListener("click", () => {
   if (main.classList.contains("opened")) return;
   main.classList.add("opened");
   env.setAttribute("aria-expanded", "true");
   env.setAttribute("aria-label", "Sobre abierto");
   fab.hidden = false;
-  if (byTap) {
-    start();
-    setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);
-  } else {
-    // Llegó desde el PDF, sin un toque en esta página. Los navegadores solo dejan sonar audio tras
-    // un gesto del invitado, así que se intenta de una vez y se reintenta en cada gesto
-    // (toque, desplazamiento, tecla) hasta que el navegador lo acepte. Mientras tanto se invita a tocar.
-    nudge(true);
-    start(true);
-    const gestures = ["pointerup", "touchend", "click", "keydown", "scroll", "wheel"];
-    let last = 0;
-    const stopTrying = () => gestures.forEach(n => removeEventListener(n, tryAgain, true));
-    const tryAgain = e => {
-      if (started || !au.paused) return stopTrying();
-      const t = e.target;
-      if (t && t.closest && t.closest("a,button,input")) return;   // los controles hacen lo suyo
-      const now = Date.now();
-      if (now - last < 1000) return;
-      last = now;
-      start(true);
-    };
-    gestures.forEach(n => addEventListener(n, tryAgain, {capture: true, passive: true}));
-  }
+  start();
+  setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);   // si el navegador la bloqueó, se invita a tocar
   const calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
   setTimeout(() => document.querySelector(".env-wrap").scrollIntoView({behavior: calm ? "auto" : "smooth", block: "start"}), calm ? 0 : 950);
-}
-env.addEventListener("click", () => openEnvelope(true));
-if (AUTO) setTimeout(() => openEnvelope(false), 700);   // llega desde el PDF: el sobre se abre solo
+});
 
 // Reproductor de "Nuestra canción": la etiqueta <audio> del navegador con controles propios.
 const au = document.getElementById("au"), fab = document.getElementById("fab"), toggle = document.getElementById("toggle"),
@@ -540,8 +493,8 @@ function progress(){
   document.getElementById("dur").textContent = mmss(d);
 }
 function fail(){ loading(false); nudge(false); statusEl.hidden = false; paint(); }
-function start(quiet){               // quiet: intento sin toque, no muestra "cargando"
-  statusEl.hidden = true; if (!quiet) loading(true);
+function start(){
+  statusEl.hidden = true; loading(true);
   const p = au.play();
   if (p && p.catch) p.catch(err => {
     const name = err && err.name;
