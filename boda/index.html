@@ -84,6 +84,9 @@ h1,h2,p{margin:0}
 @keyframes slide{from{opacity:0;translate:0 -90px;scale:.86}}
 
 .invite{width:100%;background:var(--paper);padding:40px 24px 44px;border-radius:30px 30px 64px 64px / 30px 30px 46px 46px;border:1px solid var(--line);box-shadow:0 0 0 5px var(--paper),0 0 0 6px var(--line),0 24px 34px rgba(34,43,66,.18);display:flex;flex-direction:column;align-items:center;gap:16px}
+.invite .lead{font-family:var(--script);font-weight:400;font-size:2.7rem;line-height:1.1;color:var(--navy)}
+.invite .vow{max-width:27ch;font-size:1.02rem;line-height:1.75;text-wrap:balance}
+.invite .rule{width:44px;height:1px;background:var(--ink-soft);opacity:.5;margin-block:8px}
 .invite .names{font-family:var(--script);font-size:clamp(3.2rem,15vw,4.2rem);line-height:1}
 .invite .names span{display:block;font-size:.55em;line-height:1.1;color:var(--blue)}
 .when{width:100%;max-width:300px;display:flex;flex-direction:column;gap:6px;margin-top:6px}
@@ -208,6 +211,9 @@ h1,h2,p{margin:0}
   <div class="content" id="content">
     <section class="invite">
       <div class="sprigs" aria-hidden="true"><svg><use href="#sprig"/></svg><svg><use href="#sprig"/></svg></div>
+      <h2 class="lead">Nos casamos</h2>
+      <p class="vow">Dios escribió nuestra historia de amor y hoy nos permite dar el siguiente paso: unir nuestras vidas para siempre.</p>
+      <div class="rule" aria-hidden="true"></div>
       <p class="caps">Tenemos el honor de<br>invitarte a nuestra boda</p>
       <p class="names">Caleb <span>&amp;</span> Anyi</p>
       <div class="when">
