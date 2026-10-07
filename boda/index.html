@@ -290,7 +290,7 @@ h1,h2,p{margin:0}
     <section class="paper rsvp" aria-labelledby="rsvpTitle">
       <h2 id="rsvpTitle">Confirma tu asistencia</h2>
       <p class="who" id="rName" hidden></p>
-      <p><span id="rSeats" hidden>Hemos reservado <strong style="font-weight:500" id="rCount"></strong> para ti. </span>Cuéntanos si nos acompañas antes del 1 de noviembre de 2026.</p>
+      <p id="rText">Cuéntanos si nos acompañas antes del 1 de noviembre de 2026.</p>
       <div class="pills">
         <a class="pill fill" id="waYes" href="https://wa.me/573000000000" target="_blank" rel="noopener">Sí, ahí estaré</a>
         <a class="pill" id="waNo" href="https://wa.me/573000000000" target="_blank" rel="noopener">No podré asistir</a>
@@ -316,27 +316,51 @@ h1,h2,p{margin:0}
 const FECHA = new Date("2026-11-19T16:00:00-05:00");
 
 const main = document.getElementById("main"), env = document.getElementById("env");
-// El enlace del PDF trae el invitado, sus cupos y la orden de abrir el sobre:
-//   ?para=Nombre+Apellido&cupos=2&abierto=1
+// Código de invitación: tipo (familia o persona), cupos y nombre empacados en un texto corto.
+// Va mezclado con una llave y lleva una suma de control, así que no se lee a simple vista
+// y cualquier cambio hecho a mano lo invalida.
+const INV = (() => {
+  const K = [0x6b, 0x31, 0xc7, 0x52, 0x9e, 0x24, 0xa8, 0x15, 0xd3, 0x4f];
+  const fnv = bytes => { let h = 0x811c9dc5; for (const b of bytes) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
+  const stream = (salt, n) => {
+    let x = (fnv(K.concat([salt, 0x5a])) || 1) >>> 0; const out = new Uint8Array(n);
+    for (let i = 0; i < n; i++) { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; out[i] = (x >>> 11) & 255; }
+    return out;
+  };
+  const b64 = u => btoa(String.fromCharCode.apply(null, Array.from(u))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const check = (salt, plain) => { const c = fnv(K.concat([salt], plain)); return [c & 255, (c >>> 8) & 255, (c >>> 16) & 255]; };
+  function encode(g){                                  // {tipo: "f" | "p", nombre, cupos}
+    const plain = [(g.tipo === "f" ? 0x80 : 0) | (g.cupos & 31)].concat(Array.from(new TextEncoder().encode(g.nombre)));
+    const salt = fnv(plain) & 255;                     // mismo invitado, mismo enlace
+    const body = plain.concat(check(salt, plain)), ks = stream(salt, body.length);
+    return b64(Uint8Array.from([salt].concat(body.map((v, i) => v ^ ks[i]))));
+  }
+  function decode(tok){
+    try {
+      if (!/^[A-Za-z0-9_-]{8,160}$/.test(tok || "")) return null;
+      const u = unb64(tok); if (u.length < 6 || b64(u) !== tok) return null;
+      const salt = u[0], ks = stream(salt, u.length - 1);
+      const body = Array.from(u.slice(1), (v, i) => v ^ ks[i]);
+      const plain = body.slice(0, -3), sum = check(salt, plain);
+      for (let i = 0; i < 3; i++) if (body[plain.length + i] !== sum[i]) return null;
+      const cupos = plain[0] & 31, nombre = new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
+      if (!cupos || !nombre.trim()) return null;
+      return {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
+    } catch (e) { return null; }
+  }
+  return {encode, decode};
+})();
+if (typeof module !== "undefined") module.exports = INV;
+
+
+// El enlace de cada invitación trae un código: ?i=CODIGO  (y, si viene del PDF, &abierto=1).
+// El código guarda si es familia o persona, el nombre y los cupos.
 const q = new URLSearchParams(location.search);
-// Forma corta del nombre: guiones bajos en vez de espacios y, aparte, las tildes en "t"
-// (posición de la letra y tipo), para que el enlace se lea limpio: ?para=Luciana_Perez&cupos=2&t=9
-function guestName(){
-  let n = (q.get("para") || "").replace(/_/g, " ").trim().slice(0, 60);
-  const t = q.get("t");
-  if (!n || !t) return n;
-  try {
-    const MARK = {"": "\u0301", a: "\u0301", n: "\u0303", u: "\u0308", g: "\u0300", c: "\u0302", d: "\u0327"};
-    const ch = Array.from(n);
-    for (const tok of t.split(".")) {
-      const m = /^(\d+)([a-z]?)$/.exec(tok);
-      if (m && ch[+m[1]] && MARK[m[2]]) ch[+m[1]] += MARK[m[2]];
-    }
-    return ch.join("").normalize("NFC");
-  } catch (e) { return n; }
-}
-const GUEST = guestName();
-const SEATS = Math.min(Math.max(parseInt(q.get("cupos"), 10) || 0, 0), 20);
+const INVITE = INV.decode(q.get("i"));
+const FAM = !!INVITE && INVITE.tipo === "f";
+const GUEST = INVITE ? (FAM ? "Familia " + INVITE.nombre : INVITE.nombre) : "";
+const SEATS = INVITE ? INVITE.cupos : 0;
 // El sobre se abre solo únicamente al llegar desde el PDF. Se quita "abierto" de la dirección
 // para que, al recargar, el sobre vuelva a estar cerrado y haya que tocarlo.
 const nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
@@ -346,20 +370,33 @@ if (q.has("abierto")) {
   try { const rest = q.toString(); history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash); } catch (e) {}
 }
 const WHATSAPP = "573000000000";   // número de ejemplo
+const DEADLINE = "1 de noviembre de 2026";
 (function fillGuest(){
-  const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
-  if (GUEST) {
-    for (const id of ["gName", "rName"]) { const el = document.getElementById(id); el.textContent = GUEST; el.hidden = false; }
-    if (SEATS) {
-      const g = document.getElementById("gSeats");
-      g.textContent = "Hemos reservado (" + SEATS + ") " + (SEATS === 1 ? "cupo" : "cupos") + " para ti"; g.hidden = false;
-      document.getElementById("rCount").textContent = seats; document.getElementById("rSeats").hidden = false;
-    }
-  }
-  const who = GUEST ? "Hola, soy " + GUEST + ". " : "Hola. ";
   const wa = t => "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(t);
-  document.getElementById("waYes").href = wa(who + "Confirmo mi asistencia a la boda de Caleb y Anyi.");
-  document.getElementById("waNo").href = wa(who + "No podré asistir a la boda, pero los llevo en mi corazón.");
+  const yes = document.getElementById("waYes"), no = document.getElementById("waNo");
+  if (!INVITE) {
+    yes.href = wa("Hola. Confirmo mi asistencia a la boda de Caleb y Anyi.");
+    no.href = wa("Hola. No podré asistir a la boda de Caleb y Anyi, pero los llevo en mi corazón.");
+    return;
+  }
+  const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
+  for (const id of ["gName", "rName"]) { const el = document.getElementById(id); el.textContent = GUEST; el.hidden = false; }
+  const g = document.getElementById("gSeats");
+  g.textContent = "Hemos reservado (" + SEATS + ") " + (SEATS === 1 ? "cupo" : "cupos") + " para " + (FAM ? "ustedes" : "ti");
+  g.hidden = false;
+  const strong = document.createElement("strong"); strong.style.fontWeight = "500"; strong.textContent = seats;
+  const rText = document.getElementById("rText"); rText.textContent = "";
+  rText.append("Hemos reservado ", strong, FAM
+    ? " para ustedes. Cuéntennos si nos acompañan antes del " + DEADLINE + "."
+    : " para ti. Cuéntanos si nos acompañas antes del " + DEADLINE + ".");
+  if (FAM) {
+    yes.textContent = "Sí, ahí estaremos"; no.textContent = "No podremos asistir";
+    yes.href = wa("La familia " + INVITE.nombre + " se complace en anunciar su presencia en la boda de Caleb y Anyi.");
+    no.href = wa("La familia " + INVITE.nombre + " lamenta no poder asistir a la boda de Caleb y Anyi, pero los lleva en su corazón.");
+  } else {
+    yes.href = wa(INVITE.nombre + " se complace en confirmar su asistencia a la boda de Caleb y Anyi.");
+    no.href = wa(INVITE.nombre + " lamenta no poder asistir a la boda de Caleb y Anyi, pero los lleva en su corazón.");
+  }
 })();
 
 function openEnvelope(byTap){
