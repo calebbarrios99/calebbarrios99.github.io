@@ -314,7 +314,14 @@ const main = document.getElementById("main"), env = document.getElementById("env
 const q = new URLSearchParams(location.search);
 const GUEST = (q.get("para") || "").trim().slice(0, 60);
 const SEATS = Math.min(Math.max(parseInt(q.get("cupos"), 10) || 0, 0), 20);
-const AUTO = q.has("abierto");
+// El sobre se abre solo únicamente al llegar desde el PDF. Se quita "abierto" de la dirección
+// para que, al recargar, el sobre vuelva a estar cerrado y haya que tocarlo.
+const nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+const AUTO = q.has("abierto") && !(nav && nav.type === "reload");
+if (q.has("abierto")) {
+  q.delete("abierto");
+  try { const rest = q.toString(); history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash); } catch (e) {}
+}
 const WHATSAPP = "573000000000";   // número de ejemplo
 (function fillGuest(){
   const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
