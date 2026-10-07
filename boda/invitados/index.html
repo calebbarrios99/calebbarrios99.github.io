@@ -155,40 +155,119 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 <p id="toast" role="status" hidden></p>
 
 <script>
-// Código de invitación: tipo (familia o persona), cupos y nombre empacados en un texto corto.
-// Va mezclado con una llave y lleva una suma de control, así que no se lee a simple vista
-// y cualquier cambio hecho a mano lo invalida.
+// Código de invitación: tipo (familia o persona), cupos y nombre empacados en un texto corto,
+// solo con letras y números. Va mezclado con una llave y lleva una suma de control, así que
+// no se lee a simple vista y cualquier cambio hecho a mano lo invalida.
 const INV = (() => {
   const K = [0x6b, 0x31, 0xc7, 0x52, 0x9e, 0x24, 0xa8, 0x15, 0xd3, 0x4f];
   const fnv = bytes => { let h = 0x811c9dc5; for (const b of bytes) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
-  const stream = (salt, n) => {
-    let x = (fnv(K.concat([salt, 0x5a])) || 1) >>> 0; const out = new Uint8Array(n);
-    for (let i = 0; i < n; i++) { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; out[i] = (x >>> 11) & 255; }
+  const stream = (seed, n) => {
+    let x = (fnv(K.concat(seed, [0x5a])) || 1) >>> 0; const out = [];
+    for (let i = 0; i < n; i++) { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; out.push((x >>> 11) & 255); }
     return out;
   };
-  const b64 = u => btoa(String.fromCharCode.apply(null, Array.from(u))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-  const check = (salt, plain) => { const c = fnv(K.concat([salt], plain)); return [c & 255, (c >>> 8) & 255, (c >>> 16) & 255]; };
-  function encode(g){                                  // {tipo: "f" | "p", nombre, cupos}
-    const plain = [(g.tipo === "f" ? 0x80 : 0) | (g.cupos & 31)].concat(Array.from(new TextEncoder().encode(g.nombre)));
-    const salt = fnv(plain) & 255;                     // mismo invitado, mismo enlace
-    const body = plain.concat(check(salt, plain)), ks = stream(salt, body.length);
-    return b64(Uint8Array.from([salt].concat(body.map((v, i) => v ^ ks[i]))));
+
+  // --- Texto del código: base 62 (0-9, A-Z, a-z), sin guiones ni símbolos ---
+  const A62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  function to62(bytes){
+    let num = [1].concat(bytes), s = "";
+    while (num.length) {
+      let rem = 0; const quo = [];
+      for (const d of num) { const cur = rem * 256 + d, qd = Math.floor(cur / 62); rem = cur % 62; if (quo.length || qd) quo.push(qd); }
+      s = A62[rem] + s; num = quo;
+    }
+    return s;
+  }
+  function from62(s){
+    const num = [];
+    for (const c of s) {
+      let carry = A62.indexOf(c); if (carry < 0) return null;
+      for (let i = num.length - 1; i >= 0; i--) { const cur = num[i] * 62 + carry; num[i] = cur & 255; carry = cur >> 8; }
+      while (carry) { num.unshift(carry & 255); carry >>= 8; }
+    }
+    return num[0] === 1 ? num.slice(1) : null;
+  }
+
+  // --- Nombre compacto: 5 bits por letra en vez de 8 ---
+  // 1-26 a-z · 27 espacio · 28 ñ · 29 tilde en la siguiente · 30 diéresis en la siguiente
+  // 31 la siguiente letra rompe la regla de mayúsculas (mayúscula solo al inicio de cada palabra) · 0 fin
+  const LOW = "abcdefghijklmnopqrstuvwxyz", ACUTE = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u"}, ADD = {a: "á", e: "é", i: "í", o: "ó", u: "ú"};
+  function pack(name){
+    const codes = []; let start = true;
+    for (const ch of Array.from(name)) {
+      if (ch === " ") { codes.push(27); start = true; continue; }
+      const lower = ch.toLowerCase(); let base = lower, mark = 0;
+      if (ACUTE[lower]) { base = ACUTE[lower]; mark = 29; } else if (lower === "ü") { base = "u"; mark = 30; }
+      const code = base === "ñ" ? 28 : LOW.indexOf(base) + 1;
+      if (base.length !== 1 || code < 1) return null;
+      if ((ch !== lower) !== start) codes.push(31);
+      if (mark) codes.push(mark);
+      codes.push(code); start = false;
+    }
+    const bytes = []; let acc = 0, bits = 0;
+    for (const c of codes) { acc = (acc << 5) | c; bits += 5; while (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 255); } }
+    if (bits) bytes.push((acc << (8 - bits)) & 255);
+    return bytes;
+  }
+  function unpack(bytes){
+    let out = "", acc = 0, bits = 0, start = true, flip = false, mark = 0;
+    for (const b of bytes) {
+      acc = ((acc << 8) | b) & 0xffff; bits += 8;
+      while (bits >= 5) {
+        bits -= 5; const c = (acc >> bits) & 31;
+        if (c === 0) return out;
+        if (c === 27) { out += " "; start = true; }
+        else if (c === 31) flip = true;
+        else if (c === 29 || c === 30) mark = c;
+        else {
+          let ch = c === 28 ? "ñ" : LOW[c - 1];
+          if (mark === 29) { ch = ADD[ch]; if (!ch) return null; } else if (mark === 30) { if (ch !== "u") return null; ch = "ü"; }
+          out += start !== flip ? ch.toUpperCase() : ch; start = false; flip = false; mark = 0;
+        }
+      }
+    }
+    return out;
+  }
+
+  const tagOf = plain => { const c = fnv(K.concat(plain)); return [c & 255, (c >>> 8) & 255]; };
+  function encode(g){                                   // {tipo: "f" | "p", nombre, cupos}
+    const name = String(g.nombre).normalize("NFC"), head = (g.tipo === "f" ? 0x80 : 0) | (g.cupos & 31);
+    const small = pack(name);
+    const plain = small && unpack(small) === name
+      ? [head | 0x40].concat(small)                    // nombre compacto
+      : [head].concat(Array.from(new TextEncoder().encode(name)));   // nombre con otros caracteres
+    const tag = tagOf(plain), ks = stream(tag, plain.length);
+    return to62(tag.concat(plain.map((v, i) => v ^ ks[i])));
   }
   function decode(tok){
     try {
+      if (!/^[0-9A-Za-z]{6,140}$/.test(tok || "")) return null;
+      const u = from62(tok); if (!u || u.length < 4) return null;
+      const tag = u.slice(0, 2), ks = stream(tag, u.length - 2), plain = u.slice(2).map((v, i) => v ^ ks[i]), sum = tagOf(plain);
+      if (sum[0] !== tag[0] || sum[1] !== tag[1]) return null;
+      const cupos = plain[0] & 31;
+      const nombre = plain[0] & 0x40 ? unpack(plain.slice(1)) : new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
+      if (!cupos || !nombre || !nombre.trim()) return null;
+      const g = {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
+      return encode(g) === tok ? g : null;             // solo se acepta la forma exacta que genera la app
+    } catch (e) { return null; }
+  }
+
+  // --- Formato anterior (?i=...), para que los enlaces ya enviados sigan abriendo ---
+  function decodeOld(tok){
+    try {
       if (!/^[A-Za-z0-9_-]{8,160}$/.test(tok || "")) return null;
-      const u = unb64(tok); if (u.length < 6 || b64(u) !== tok) return null;
-      const salt = u[0], ks = stream(salt, u.length - 1);
-      const body = Array.from(u.slice(1), (v, i) => v ^ ks[i]);
-      const plain = body.slice(0, -3), sum = check(salt, plain);
+      const u = Array.from(atob(tok.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+      if (u.length < 6) return null;
+      const salt = u[0], ks = stream([salt], u.length - 1), body = u.slice(1).map((v, i) => v ^ ks[i]);
+      const plain = body.slice(0, -3), c = fnv(K.concat([salt], plain)), sum = [c & 255, (c >>> 8) & 255, (c >>> 16) & 255];
       for (let i = 0; i < 3; i++) if (body[plain.length + i] !== sum[i]) return null;
       const cupos = plain[0] & 31, nombre = new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
       if (!cupos || !nombre.trim()) return null;
       return {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
     } catch (e) { return null; }
   }
-  return {encode, decode};
+  return {encode, decode, decodeOld};
 })();
 if (typeof module !== "undefined") module.exports = INV;
 
@@ -211,7 +290,7 @@ if (MSG_OLD.includes(opt.msgF)) opt.msgF = MSG_F;
 if (MSG_OLD.includes(opt.msgP)) opt.msgP = MSG_P;
 
 // ---- Enlace: un código corto que no se puede leer ni editar a mano ----
-const linkFor = (g, auto) => BASE + "?i=" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos}) + (auto ? "&abierto=1" : "");
+const linkFor = (g, auto) => BASE + "?" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos}) + (auto ? "&abierto=1" : "");
 const shown = g => g.tipo === "f" ? "Familia " + g.nombre : g.nombre;
 const phoneFor = cel => {
   let d = (cel || "").replace(/\D/g, "");
