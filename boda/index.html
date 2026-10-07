@@ -202,8 +202,8 @@ h1,h2,p{margin:0}
       </div>
     </div>
     <div class="guest">
-      <p class="script">Luciana Pérez</p>
-      <p class="caps soft">Hemos reservado (2) cupos para ti</p>
+      <p class="script" id="gName" hidden></p>
+      <p class="caps soft" id="gSeats" hidden></p>
       <p class="sound">♪ Sube el volumen, esta invitación tiene música</p>
     </div>
   </section>
@@ -282,11 +282,11 @@ h1,h2,p{margin:0}
 
     <section class="paper rsvp" aria-labelledby="rsvpTitle">
       <h2 id="rsvpTitle">Confirma tu asistencia</h2>
-      <p class="who">Luciana Pérez</p>
-      <p>Hemos reservado <strong style="font-weight:500">2 cupos</strong> para ti. Cuéntanos si nos acompañas antes del 1 de noviembre de 2026.</p>
+      <p class="who" id="rName" hidden></p>
+      <p><span id="rSeats" hidden>Hemos reservado <strong style="font-weight:500" id="rCount"></strong> para ti. </span>Cuéntanos si nos acompañas antes del 1 de noviembre de 2026.</p>
       <div class="pills">
-        <a class="pill fill" href="https://wa.me/573000000000?text=Hola%2C%20soy%20Luciana%20P%C3%A9rez.%20Confirmo%20mi%20asistencia%20a%20la%20boda%20de%20Caleb%20y%20Anyi." target="_blank" rel="noopener">Sí, ahí estaré</a>
-        <a class="pill" href="https://wa.me/573000000000?text=Hola%2C%20soy%20Luciana%20P%C3%A9rez.%20No%20podr%C3%A9%20asistir%20a%20la%20boda%2C%20pero%20los%20llevo%20en%20mi%20coraz%C3%B3n." target="_blank" rel="noopener">No podré asistir</a>
+        <a class="pill fill" id="waYes" href="https://wa.me/573000000000" target="_blank" rel="noopener">Sí, ahí estaré</a>
+        <a class="pill" id="waNo" href="https://wa.me/573000000000" target="_blank" rel="noopener">No podré asistir</a>
       </div>
       <p class="caps soft" style="font-size:.6rem">Se abre WhatsApp con el mensaje listo</p>
     </section>
@@ -309,17 +309,55 @@ h1,h2,p{margin:0}
 const FECHA = new Date("2026-11-19T16:00:00-05:00");
 
 const main = document.getElementById("main"), env = document.getElementById("env");
-env.addEventListener("click", () => {
+// El enlace del PDF trae el invitado, sus cupos y la orden de abrir el sobre:
+//   ?para=Nombre+Apellido&cupos=2&abierto=1
+const q = new URLSearchParams(location.search);
+const GUEST = (q.get("para") || "").trim().slice(0, 60);
+const SEATS = Math.min(Math.max(parseInt(q.get("cupos"), 10) || 0, 0), 20);
+const AUTO = q.has("abierto");
+const WHATSAPP = "573000000000";   // número de ejemplo
+(function fillGuest(){
+  const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
+  if (GUEST) {
+    for (const id of ["gName", "rName"]) { const el = document.getElementById(id); el.textContent = GUEST; el.hidden = false; }
+    if (SEATS) {
+      const g = document.getElementById("gSeats");
+      g.textContent = "Hemos reservado (" + SEATS + ") " + (SEATS === 1 ? "cupo" : "cupos") + " para ti"; g.hidden = false;
+      document.getElementById("rCount").textContent = seats; document.getElementById("rSeats").hidden = false;
+    }
+  }
+  const who = GUEST ? "Hola, soy " + GUEST + ". " : "Hola. ";
+  const wa = t => "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(t);
+  document.getElementById("waYes").href = wa(who + "Confirmo mi asistencia a la boda de Caleb y Anyi.");
+  document.getElementById("waNo").href = wa(who + "No podré asistir a la boda, pero los llevo en mi corazón.");
+})();
+
+function openEnvelope(byTap){
   if (main.classList.contains("opened")) return;
   main.classList.add("opened");
   env.setAttribute("aria-expanded", "true");
   env.setAttribute("aria-label", "Sobre abierto");
   fab.hidden = false;
-  start();
-  setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);
+  if (byTap) {
+    start();
+    setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);
+  } else {
+    // Sin un toque en esta página el navegador no deja sonar la canción: se invita a tocar,
+    // y el primer toque en cualquier parte (que no sea un botón o enlace) la inicia.
+    nudge(true);
+    const first = e => {
+      if (started || !au.paused) return document.removeEventListener("click", first, true);
+      if (e.target.closest("a,button,input")) return;
+      document.removeEventListener("click", first, true);
+      nudge(false); start();
+    };
+    document.addEventListener("click", first, true);
+  }
   const calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
   setTimeout(() => document.querySelector(".env-wrap").scrollIntoView({behavior: calm ? "auto" : "smooth", block: "start"}), calm ? 0 : 950);
-});
+}
+env.addEventListener("click", () => openEnvelope(true));
+if (AUTO) setTimeout(() => openEnvelope(false), 700);   // llega desde el PDF: el sobre se abre solo
 
 // Reproductor de "Nuestra canción": la etiqueta <audio> del navegador con controles propios.
 const au = document.getElementById("au"), fab = document.getElementById("fab"), toggle = document.getElementById("toggle"),
