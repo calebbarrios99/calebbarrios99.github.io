@@ -349,16 +349,24 @@ function openEnvelope(byTap){
     start();
     setTimeout(() => { if (!started && au.paused && statusEl.hidden) nudge(true); }, 2500);
   } else {
-    // Sin un toque en esta página el navegador no deja sonar la canción: se invita a tocar,
-    // y el primer toque en cualquier parte (que no sea un botón o enlace) la inicia.
+    // Llegó desde el PDF, sin un toque en esta página. Los navegadores solo dejan sonar audio tras
+    // un gesto del invitado, así que se intenta de una vez y se reintenta en cada gesto
+    // (toque, desplazamiento, tecla) hasta que el navegador lo acepte. Mientras tanto se invita a tocar.
     nudge(true);
-    const first = e => {
-      if (started || !au.paused) return document.removeEventListener("click", first, true);
-      if (e.target.closest("a,button,input")) return;
-      document.removeEventListener("click", first, true);
-      nudge(false); start();
+    start(true);
+    const gestures = ["pointerup", "touchend", "click", "keydown", "scroll", "wheel"];
+    let last = 0;
+    const stopTrying = () => gestures.forEach(n => removeEventListener(n, tryAgain, true));
+    const tryAgain = e => {
+      if (started || !au.paused) return stopTrying();
+      const t = e.target;
+      if (t && t.closest && t.closest("a,button,input")) return;   // los controles hacen lo suyo
+      const now = Date.now();
+      if (now - last < 1000) return;
+      last = now;
+      start(true);
     };
-    document.addEventListener("click", first, true);
+    gestures.forEach(n => addEventListener(n, tryAgain, {capture: true, passive: true}));
   }
   const calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
   setTimeout(() => document.querySelector(".env-wrap").scrollIntoView({behavior: calm ? "auto" : "smooth", block: "start"}), calm ? 0 : 950);
@@ -391,8 +399,8 @@ function progress(){
   document.getElementById("dur").textContent = mmss(d);
 }
 function fail(){ loading(false); nudge(false); statusEl.hidden = false; paint(); }
-function start(){
-  statusEl.hidden = true; loading(true);
+function start(quiet){               // quiet: intento sin toque, no muestra "cargando"
+  statusEl.hidden = true; if (!quiet) loading(true);
   const p = au.play();
   if (p && p.catch) p.catch(err => {
     const name = err && err.name;
