@@ -76,6 +76,10 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .guest .seats{font-size:.82rem;color:var(--ink-soft);white-space:nowrap}
 .guest .link{font-size:.76rem;color:var(--navy);background:var(--bg);border-radius:8px;padding:9px 11px;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
 .guest .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tools .wide{grid-column:1/-1}
+.tools #importBtn:first-of-type,.tools #exportBtn[hidden]+#importBtn{grid-column:1/-1}
+.sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .empty{text-align:center;color:var(--ink-soft);font-size:.9rem;padding:26px 16px;border:1px dashed var(--line);border-radius:14px}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;font-size:.84rem;padding:11px 18px;border-radius:999px;box-shadow:0 8px 18px rgba(34,43,66,.3);max-width:calc(100% - 32px);text-align:center;z-index:10}
 @media (max-width:420px){.row{grid-template-columns:1fr}.btn{padding-inline:10px;letter-spacing:.08em}}
@@ -139,8 +143,13 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
     </div>
     <ul id="list"></ul>
     <p class="empty" id="empty">Aún no hay invitados. Escribe un nombre y sus cupos para crear el primer enlace.</p>
-    <p class="hint">La lista se guarda solo en este navegador. Si cambias de teléfono o borras los datos del navegador, no aparecerá; los enlaces ya enviados siguen funcionando.</p>
-    <button class="btn ghost" type="button" id="copyAll" hidden>Copiar toda la lista</button>
+    <p class="hint">La lista se guarda solo en este navegador. Expórtala para tener una copia o para pasarla a otro teléfono; los enlaces ya enviados siguen funcionando aunque la lista se borre.</p>
+    <div class="tools">
+      <button class="btn" type="button" id="exportBtn" hidden>Exportar lista</button>
+      <button class="btn" type="button" id="importBtn">Importar lista</button>
+      <button class="btn ghost wide" type="button" id="copyAll" hidden>Copiar toda la lista</button>
+    </div>
+    <input class="sr" type="file" id="importFile" accept=".json,application/json" tabindex="-1" aria-hidden="true">
   </section>
 </main>
 <p id="toast" role="status" hidden></p>
@@ -257,6 +266,7 @@ function render(){
   $("totals").textContent = guests.length ? `${guests.length} ${guests.length === 1 ? "invitación" : "invitaciones"} · ${seats} ${seats === 1 ? "cupo" : "cupos"} · ${sent} ${sent === 1 ? "enviada" : "enviadas"}` : "";
   $("empty").hidden = guests.length > 0;
   $("copyAll").hidden = guests.length === 0;
+  $("exportBtn").hidden = guests.length === 0;
 }
 
 // ---- Formulario ----
@@ -296,6 +306,44 @@ $("msgF").oninput = () => { opt.msgF = $("msgF").value; save(KEY_OPT, opt); rend
 $("msgP").oninput = () => { opt.msgP = $("msgP").value; save(KEY_OPT, opt); render(); };
 $("resetMsg").onclick = () => { opt.msgF = MSG_F; opt.msgP = MSG_P; $("msgF").value = MSG_F; $("msgP").value = MSG_P; save(KEY_OPT, opt); render(); toast("Mensajes restaurados"); };
 $("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${g.cupos}): ${linkFor(g, opt.auto)}`).join("\n"), "Lista copiada");
+
+// ---- Exportar e importar la lista (un archivo .json que se puede guardar o enviar) ----
+$("exportBtn").onclick = async () => {
+  const data = {app: "boda-invitados", version: 1, exportado: new Date().toISOString(),
+    invitados: guests.map(g => ({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, cel: g.cel || "", enviado: !!g.enviado}))};
+  const name = "invitados-caleb-y-anyi-" + new Date().toISOString().slice(0, 10) + ".json";
+  const file = new File([JSON.stringify(data, null, 2)], name, {type: "application/json"});
+  // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp...); en computador se descarga.
+  if (navigator.canShare && navigator.canShare({files: [file]})) {
+    try { await navigator.share({files: [file], title: "Lista de invitados"}); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a"), url = URL.createObjectURL(file);
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast("Lista exportada: " + name);
+};
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = "";
+  if (!file) return;
+  let rows;
+  try { const j = JSON.parse(await file.text()); rows = Array.isArray(j) ? j : j && j.invitados; } catch (err) { rows = null; }
+  if (!Array.isArray(rows)) return toast("Ese archivo no es una lista de invitados exportada desde aquí.");
+  let added = 0, known = 0, bad = 0;
+  for (const r of rows) {
+    const nombre = r && typeof r.nombre === "string" ? r.nombre.replace(/\s+/g, " ").trim().slice(0, 40) : "";
+    if (!nombre) { bad++; continue; }
+    const tipo = r.tipo === "f" ? "f" : "p";
+    const mine = guests.find(g => g.tipo === tipo && g.nombre.toLowerCase() === nombre.toLowerCase());
+    if (mine) { known++; if (r.enviado) mine.enviado = true; continue; }   // la que ya estaba se conserva
+    guests.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + added, tipo, nombre,
+      cupos: clamp(r.cupos), cel: typeof r.cel === "string" ? r.cel.slice(0, 30) : "", enviado: !!r.enviado});
+    added++;
+  }
+  save(KEY, guests); render();
+  toast((added === 1 ? "Se agregó 1 invitación" : "Se agregaron " + added + " invitaciones") + (known ? "; " + known + " ya " + (known === 1 ? "estaba" : "estaban") : "") + (bad ? "; " + bad + " sin nombre" : "") + ".");
+};
 
 render();
 </script>
