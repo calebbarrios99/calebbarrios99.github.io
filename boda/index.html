@@ -427,12 +427,13 @@ const GUEST = INVITE ? (FAM ? "Familia " + INVITE.nombre : INVITE.nombre) : "";
 const SEATS = INVITE ? INVITE.cupos : 0;
 const WHATSAPP = "573022144211";   // aquí llegan las confirmaciones
 const DEADLINE = "1 de noviembre de 2026";
+const DAY = "19 de noviembre";       // el día de la boda, como se nombra en los mensajes
 (function fillGuest(){
   const wa = t => "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(t);
   const yes = document.getElementById("waYes"), no = document.getElementById("waNo");
   if (!INVITE) {
-    yes.href = wa("Hola. Confirmo mi asistencia a la boda de Caleb y Anyi.");
-    no.href = wa("Hola. No podré asistir a la boda de Caleb y Anyi, pero los llevo en mi corazón.");
+    yes.href = wa("¡Hola, Caleb y Anyi! 🤍 Con mucha alegría les confirmo que estaré en su boda. ¡Nos vemos el " + DAY + "!");
+    no.href = wa("¡Hola, Caleb y Anyi! Con mucho pesar les cuento que no podré acompañarlos en su boda. Los llevo en el corazón y les deseo toda la felicidad. 🤍");
     return;
   }
   const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
@@ -445,13 +446,16 @@ const DEADLINE = "1 de noviembre de 2026";
   rText.append("Hemos reservado ", strong, FAM
     ? " para ustedes. Cuéntennos si nos acompañan antes del " + DEADLINE + "."
     : " para ti. Cuéntanos si nos acompañas antes del " + DEADLINE + ".");
+  // Mensajes que el invitado envía por WhatsApp: llevan su nombre y los cupos que se le reservaron.
   if (FAM) {
+    const mine = SEATS === 1 ? "el cupo que nos reservaron" : "los " + SEATS + " cupos que nos reservaron";
     yes.textContent = "Sí, ahí estaremos"; no.textContent = "No podremos asistir";
-    yes.href = wa("La familia " + INVITE.nombre + " se complace en anunciar su presencia en la boda de Caleb y Anyi.");
-    no.href = wa("La familia " + INVITE.nombre + " lamenta no poder asistir a la boda de Caleb y Anyi, pero los lleva en su corazón.");
+    yes.href = wa("¡Hola, Caleb y Anyi! 🤍 Somos la familia " + INVITE.nombre + " y con mucha alegría les confirmamos que estaremos en su boda, con " + mine + ". ¡Nos vemos el " + DAY + "!");
+    no.href = wa("¡Hola, Caleb y Anyi! Somos la familia " + INVITE.nombre + ". Con mucho pesar les contamos que no podremos acompañarlos en su boda, así que " + (SEATS === 1 ? "queda libre " : "quedan libres ") + mine + ". Los llevamos en el corazón y les deseamos toda la felicidad. 🤍");
   } else {
-    yes.href = wa(INVITE.nombre + " se complace en confirmar su asistencia a la boda de Caleb y Anyi.");
-    no.href = wa(INVITE.nombre + " lamenta no poder asistir a la boda de Caleb y Anyi, pero los lleva en su corazón.");
+    const mine = SEATS === 1 ? "el cupo que me reservaron" : "los " + SEATS + " cupos que me reservaron";
+    yes.href = wa("¡Hola, Caleb y Anyi! 🤍 Soy " + INVITE.nombre + " y con mucha alegría les confirmo que estaré en su boda, con " + mine + ". ¡Nos vemos el " + DAY + "!");
+    no.href = wa("¡Hola, Caleb y Anyi! Soy " + INVITE.nombre + ". Con mucho pesar les cuento que no podré acompañarlos en su boda, así que " + (SEATS === 1 ? "queda libre " : "quedan libres ") + mine + ". Los llevo en el corazón y les deseo toda la felicidad. 🤍");
   }
 })();
 
