@@ -290,7 +290,7 @@ h1,h2,p{margin:0}
     <section class="paper rsvp" aria-labelledby="rsvpTitle">
       <h2 id="rsvpTitle">Confirma tu asistencia</h2>
       <p class="who" id="rName" hidden></p>
-      <p id="rText">Cuéntanos si nos acompañas antes del 1 de noviembre de 2026.</p>
+      <p id="rText">Cuéntanos si nos acompañas a más tardar el 7 de noviembre de 2026.</p>
       <div class="pills">
         <a class="pill fill" id="waYes" href="https://wa.me/573022144211" target="_blank" rel="noopener">Sí, ahí estaré</a>
         <a class="pill" id="waNo" href="https://wa.me/573022144211" target="_blank" rel="noopener">No podré asistir</a>
@@ -426,7 +426,7 @@ const FAM = !!INVITE && INVITE.tipo === "f";
 const GUEST = INVITE ? (FAM ? "Familia " + INVITE.nombre : INVITE.nombre) : "";
 const SEATS = INVITE ? INVITE.cupos : 0;
 const WHATSAPP = "573022144211";   // aquí llegan las confirmaciones
-const DEADLINE = "1 de noviembre de 2026";
+const DEADLINE = "7 de noviembre de 2026";   // último día para confirmar
 const DAY = "19 de noviembre";       // el día de la boda, como se nombra en los mensajes
 (function fillGuest(){
   const wa = t => "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(t);
@@ -444,8 +444,8 @@ const DAY = "19 de noviembre";       // el día de la boda, como se nombra en lo
   const strong = document.createElement("strong"); strong.style.fontWeight = "500"; strong.textContent = seats;
   const rText = document.getElementById("rText"); rText.textContent = "";
   rText.append("Hemos reservado ", strong, FAM
-    ? " para ustedes. Cuéntennos si nos acompañan antes del " + DEADLINE + "."
-    : " para ti. Cuéntanos si nos acompañas antes del " + DEADLINE + ".");
+    ? " para ustedes. Cuéntennos si nos acompañan a más tardar el " + DEADLINE + "."
+    : " para ti. Cuéntanos si nos acompañas a más tardar el " + DEADLINE + ".");
   // Mensajes que el invitado envía por WhatsApp: llevan su nombre y los cupos que se le reservaron.
   if (FAM) {
     const mine = SEATS === 1 ? "el cupo que nos reservaron" : "los " + SEATS + " cupos que nos reservaron";
