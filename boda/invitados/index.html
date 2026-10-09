@@ -273,7 +273,8 @@ const opt = Object.assign({msgF: MSG_F, msgP: MSG_P}, load(KEY_OPT, {}));
 
 // ---- Enlace: un código corto que no se puede leer ni editar a mano ----
 const linkFor = g => BASE + "?" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos});
-const shown = g => g.tipo === "f" ? "Familia " + g.nombre : g.nombre;
+const shown = g => g.tipo === "f" ? "Familia " + g.nombre : g.nombre;          // como título: «Familia Barrios»
+const inText = g => g.tipo === "f" ? "la familia " + g.nombre : g.nombre;       // dentro de una frase: «para la familia Barrios»
 const phoneFor = cel => {
   let d = (cel || "").replace(/\D/g, "");
   if (d.length === 10 && d[0] === "3") d = "57" + d;      // celular colombiano sin indicativo
@@ -304,7 +305,7 @@ async function copy(text, okMsg){
     const ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;opacity:0";
     document.body.appendChild(ta); ta.select();
     let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {}
-    ta.remove(); toast(ok ? okMsg : "No se pudo copiar. Mantén pulsado el enlace para copiarlo.", ok ? "ok" : "");
+    ta.remove(); toast(ok ? okMsg : "No se pudo copiar. Mantén presionado el enlace para copiarlo.", ok ? "ok" : "");
   }
 }
 
@@ -364,13 +365,13 @@ $("form").addEventListener("submit", e => {
   const fail = msg => { err.textContent = msg; err.hidden = false; $("nombre").focus(); };
   if (!nombre) return fail(t === "f" ? "Escribe los apellidos de la familia." : "Escribe el nombre del invitado.");
   if (guests.some(g => g.tipo === t && g.nombre.toLowerCase() === nombre.toLowerCase()))
-    return fail("Ya hay una invitación para " + shown({tipo: t, nombre}) + ". Quítala de la lista si quieres crearla de nuevo.");
+    return fail("Ya hay una invitación para " + inText({tipo: t, nombre}) + ". Quítala de la lista si quieres crearla de nuevo.");
   err.hidden = true;
   guests.unshift({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tipo: t, nombre, cupos: clamp($("cupos").value), cel: $("cel").value.trim(), enviado: false});
   save(KEY, guests); render();
   $("nombre").value = ""; $("cel").value = ""; $("cupos").value = t === "f" ? 2 : 1; $("nombre").focus();
   const card = $("list").firstElementChild; if (card) card.classList.add("new");   // resalta la tarjeta recién creada
-  toast("Invitación creada para " + shown({tipo: t, nombre}), "ok");
+  toast("Invitación creada para " + inText({tipo: t, nombre}), "ok");
 });
 
 // ---- Mensajes ----
@@ -415,7 +416,7 @@ $("importFile").onchange = async e => {
     added++;
   }
   save(KEY, guests); render();
-  toast((added === 1 ? "Se agregó 1 invitación" : "Se agregaron " + added + " invitaciones") + (known ? "; " + known + " ya " + (known === 1 ? "estaba" : "estaban") : "") + (bad ? "; " + bad + " sin nombre" : "") + ".");
+  toast((added === 0 ? "No se agregó ninguna invitación" : added === 1 ? "Se agregó 1 invitación" : "Se agregaron " + added + " invitaciones") + (known ? "; " + known + " ya " + (known === 1 ? "estaba" : "estaban") : "") + (bad ? "; " + bad + " sin nombre" : "") + ".");
 };
 
 render();
