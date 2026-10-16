@@ -118,6 +118,7 @@ h1,h2,p{margin:0}
 .times{display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:300px;margin-block:4px}
 .times div{display:flex;flex-direction:column;gap:2px;padding-inline:8px}
 .times div+div{border-left:1px solid var(--line)}
+.times.one{grid-template-columns:1fr;max-width:200px}
 .times b{font-weight:400;font-size:1.25rem}
 .pills{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
 .pill{display:inline-block;padding:9px 20px;border:1px solid var(--navy);border-radius:999px;color:var(--navy);text-decoration:none;text-transform:uppercase;letter-spacing:.16em;font-size:.66rem;font-weight:400;transition:background .2s,color .2s}
@@ -234,7 +235,7 @@ h1,h2,p{margin:0}
       <p class="names">Caleb <span>&amp;</span> Anyi</p>
       <div class="when">
         <p class="caps">Noviembre</p>
-        <div class="row"><span class="caps">Jueves</span><span class="day">19</span><span class="caps">4:00 p. m.</span></div>
+        <div class="row"><span class="caps">Jueves</span><span class="day">19</span><span class="caps">7:00 p. m.</span></div>
         <p class="caps">2026</p>
       </div>
       <div class="cal" role="img" aria-label="Calendario de noviembre de 2026 con el jueves 19 marcado">
@@ -246,14 +247,13 @@ h1,h2,p{margin:0}
 
     <article class="paper main">
       <h2>Ceremonia &amp; Recepción</h2>
-      <p><span class="place">Salón de Eventos Villa Aurora</span><br><span class="soft">Calle 15 # 25–30</span></p>
-      <div class="times">
-        <div><span class="caps soft">Ceremonia</span><b>4:00 p. m.</b></div>
-        <div><span class="caps soft">Recepción</span><b>6:00 p. m.</b></div>
+      <p><span class="place">Salón de eventos Santa Sazón</span><br><span class="soft">Carrera 53 # 74–138</span></p>
+      <div class="times one">
+        <div><span class="caps soft">Hora</span><b>7:00 p. m.</b></div>
       </div>
       <div class="pills">
-        <a class="pill fill" href="https://www.google.com/maps/search/?api=1&query=Sal%C3%B3n+de+Eventos+Villa+Aurora" target="_blank" rel="noopener">Ver ubicación</a>
-        <a class="pill" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boda+Caleb+%26+Anyi&dates=20261119T210000Z/20261120T050000Z&location=Sal%C3%B3n+de+Eventos+Villa+Aurora" target="_blank" rel="noopener">Agendar</a>
+        <a class="pill fill" href="https://goo.gl/maps/iL5hsDczupFrrqwb7" target="_blank" rel="noopener">Ver ubicación</a>
+        <a class="pill" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boda+Caleb+%26+Anyi&dates=20261120T000000Z/20261120T050000Z&location=Santa+Saz%C3%B3n%2C+Carrera+53+%23+74-138&details=Ubicaci%C3%B3n%3A+https%3A%2F%2Fgoo.gl%2Fmaps%2FiL5hsDczupFrrqwb7" target="_blank" rel="noopener">Agendar</a>
       </div>
     </article>
 
@@ -324,8 +324,8 @@ h1,h2,p{margin:0}
 </button>
 
 <script>
-// Fecha de la boda: 19 de noviembre de 2026 (hora de Colombia). La hora, 4:00 p. m., sigue siendo de ejemplo.
-const FECHA = new Date("2026-11-19T16:00:00-05:00");
+// Fecha y hora de la boda: 19 de noviembre de 2026, 7:00 p. m. (hora de Colombia).
+const FECHA = new Date("2026-11-19T19:00:00-05:00");
 
 const main = document.getElementById("main"), env = document.getElementById("env");
 // Código de invitación: tipo (familia o persona), cupos y nombre empacados en un texto corto,
