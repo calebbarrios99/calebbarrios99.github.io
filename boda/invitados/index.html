@@ -44,6 +44,14 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,
 .seg input:checked+span{background:var(--navy);color:var(--paper)}
 .seg input:focus-visible+span{outline:2px solid var(--navy);outline-offset:2px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.formacts{display:grid;gap:8px}
+.formacts.two{grid-template-columns:1fr auto}
+.formacts.two .btn{padding-inline:14px;letter-spacing:.08em;white-space:nowrap}
+.editing{background:var(--bg);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.editing strong{font-size:1.05rem}
+.editing .hint{margin-top:6px;color:var(--ink)}
+.card.is-editing{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy),0 10px 22px rgba(34,43,66,.08)}
 .stepper{display:grid;grid-template-columns:48px 1fr 48px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .stepper input{border:0;border-radius:0;text-align:center;font-variant-numeric:tabular-nums;padding-inline:4px;-moz-appearance:textfield}
 .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none}
@@ -64,14 +72,27 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .err{font-size:.82rem;color:var(--danger)}
 .totals{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}
 .totals h2{font-family:var(--script);font-weight:400;font-size:2.2rem;line-height:1}
-.totals p{font-size:.84rem;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.totals p{font-size:.84rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:pre-line;text-align:right}
 #list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 .guest{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
-.guest.sent{border-color:var(--ok)}
 .guest .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .guest .kind{display:block;font-size:.62rem;font-weight:500;text-transform:uppercase;letter-spacing:.14em;color:var(--blue)}
 .guest .name{font-weight:600;font-size:1.05rem;overflow-wrap:anywhere;min-width:0}
-.guest .seats{font-size:.82rem;color:var(--ink-soft);white-space:nowrap}
+.guest{cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.guest:hover{border-color:var(--ink-soft)}
+.guest[data-estado="enviada"]{border-color:var(--blue)}
+.guest[data-estado="confirmada"]{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)}
+.guest.editing-now{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy)}
+.guest .editlbl{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--navy);white-space:nowrap;align-self:flex-start;padding-top:2px}
+.guest .seats{font-size:.84rem;color:var(--ink-soft);margin-top:-4px;display:flex;flex-wrap:wrap;gap:2px 14px}
+.guest .seats b{font-weight:600;color:var(--ink)}
+.state{position:relative;display:block}
+.state select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;text-align:center;text-align-last:center;border-radius:999px;padding:11px 30px 11px 16px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink-soft)}
+.state::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-70%) rotate(45deg);pointer-events:none;color:var(--ink-soft)}
+.state select.enviada{border-color:var(--blue);color:var(--navy);background:#eef2fa}
+.state select.confirmada{border-color:var(--ok);background:var(--ok);color:#fff}
+.state:has(select.confirmada)::after{color:#fff}
+.state select:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 .guest .link{font-size:.76rem;color:var(--navy);background:var(--bg);border-radius:8px;padding:9px 11px;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
 .guest .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -98,6 +119,11 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
   </header>
 
   <form class="card" id="form" novalidate>
+    <div class="editing" id="editBar" hidden>
+      <span class="caps">Editando</span>
+      <strong id="editName"></strong>
+      <p class="hint" id="editWarn" hidden>Esta invitación ya se envió. Si cambias el tipo, el nombre o los cupos, el enlace cambia y tendrás que enviarlo de nuevo.</p>
+    </div>
     <fieldset class="seg">
       <legend>Tipo de invitación</legend>
       <label><input type="radio" name="tipo" id="tipoF" value="f" checked><span>Familia</span></label>
@@ -107,20 +133,30 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <input type="text" id="nombre" autocomplete="off" autocapitalize="words" maxlength="40" placeholder="Barrios Roncancio" required>
       <small id="nombreHint">En la invitación aparecerá como «Familia Barrios Roncancio».</small>
     </label>
-    <div class="row">
-      <label for="cupos">Cupos
+    <div class="row2">
+      <label for="cupos">Cupos de adultos
         <span class="stepper">
-          <button type="button" id="menos" aria-label="Un cupo menos">−</button>
+          <button type="button" data-for="cupos" data-step="-1" aria-label="Un cupo de adulto menos">−</button>
           <input type="number" id="cupos" inputmode="numeric" min="1" max="20" value="2">
-          <button type="button" id="mas" aria-label="Un cupo más">+</button>
+          <button type="button" data-for="cupos" data-step="1" aria-label="Un cupo de adulto más">+</button>
         </span>
       </label>
-      <label for="cel">WhatsApp <small>(opcional)</small>
-        <input type="tel" id="cel" autocomplete="off" inputmode="tel" placeholder="300 123 4567">
+      <label for="ninos">Cupos de niños
+        <span class="stepper">
+          <button type="button" data-for="ninos" data-step="-1" aria-label="Un cupo de niño menos">−</button>
+          <input type="number" id="ninos" inputmode="numeric" min="0" max="20" value="0">
+          <button type="button" data-for="ninos" data-step="1" aria-label="Un cupo de niño más">+</button>
+        </span>
       </label>
     </div>
+    <label for="cel">WhatsApp <small>(opcional)</small>
+      <input type="tel" id="cel" autocomplete="off" inputmode="tel" placeholder="300 123 4567">
+    </label>
     <p class="err" id="err" role="alert" hidden></p>
-    <button class="btn fill big" type="submit">Crear invitación</button>
+    <div class="formacts" id="formActs">
+      <button class="btn fill big" type="submit" id="submitBtn">Crear invitación</button>
+      <button class="btn ghost big" type="button" id="cancelEdit" hidden>Cancelar</button>
+    </div>
 
     <details>
       <summary>Mensajes de invitación</summary>
@@ -147,7 +183,7 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <button class="btn" type="button" id="importBtn">Importar lista</button>
       <button class="btn ghost wide" type="button" id="copyAll" hidden>Copiar toda la lista</button>
     </div>
-    <p class="hint">La lista se guarda solo en este navegador. Expórtala para tener una copia o para pasarla a otro teléfono; los enlaces ya enviados siguen funcionando aunque la lista se borre.</p>
+    <p class="hint">Toca una invitación para editarla. La lista se guarda solo en este navegador. Expórtala para tener una copia o para pasarla a otro teléfono; los enlaces ya enviados siguen funcionando aunque la lista se borre.</p>
     <ul id="list"></ul>
     <p class="empty" id="empty">Aún no hay invitados. Escribe un nombre y sus cupos para crear el primer enlace.</p>
     <input class="sr" type="file" id="importFile" accept=".json,application/json" tabindex="-1" aria-hidden="true">
@@ -231,12 +267,15 @@ const INV = (() => {
   }
 
   const tagOf = plain => { const c = fnv(K.concat(plain)); return [c & 255, (c >>> 8) & 255]; };
-  function encode(g){                                   // {tipo: "f" | "p", nombre, cupos}
-    const name = String(g.nombre).normalize("NFC"), head = (g.tipo === "f" ? 0x80 : 0) | (g.cupos & 31);
+  // Primer byte: 1 bit familia/persona · 1 bit nombre compacto · 1 bit "hay niños" · 5 bits cupos de adultos.
+  // Si hay cupos de niños, el siguiente byte los guarda.
+  function encode(g){                                   // {tipo: "f" | "p", nombre, cupos, ninos}
+    const name = String(g.nombre).normalize("NFC"), ninos = Math.max(0, Math.min(31, g.ninos | 0));
+    const head = (g.tipo === "f" ? 0x80 : 0) | (ninos ? 0x20 : 0) | (g.cupos & 31), kids = ninos ? [ninos] : [];
     const small = pack(name);
     const plain = small && unpack(small) === name
-      ? [head | 0x40].concat(small)                    // nombre compacto
-      : [head].concat(Array.from(new TextEncoder().encode(name)));   // nombre con otros caracteres
+      ? [head | 0x40].concat(kids, small)              // nombre compacto
+      : [head].concat(kids, Array.from(new TextEncoder().encode(name)));   // nombre con otros caracteres
     const tag = tagOf(plain), ks = stream(tag, plain.length);
     return to62(tag.concat(plain.map((v, i) => v ^ ks[i])));
   }
@@ -246,10 +285,10 @@ const INV = (() => {
       const u = from62(tok); if (!u || u.length < 4) return null;
       const tag = u.slice(0, 2), ks = stream(tag, u.length - 2), plain = u.slice(2).map((v, i) => v ^ ks[i]), sum = tagOf(plain);
       if (sum[0] !== tag[0] || sum[1] !== tag[1]) return null;
-      const cupos = plain[0] & 31;
-      const nombre = plain[0] & 0x40 ? unpack(plain.slice(1)) : new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
+      const cupos = plain[0] & 31, at = plain[0] & 0x20 ? 2 : 1, ninos = at === 2 ? plain[1] : 0;
+      const nombre = plain[0] & 0x40 ? unpack(plain.slice(at)) : new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(at)));
       if (!cupos || !nombre || !nombre.trim()) return null;
-      const g = {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
+      const g = {tipo: plain[0] & 0x80 ? "f" : "p", cupos, ninos, nombre};
       return encode(g) === tok ? g : null;             // solo se acepta la forma exacta que genera la app
     } catch (e) { return null; }
   }
@@ -268,13 +307,26 @@ const $ = id => document.getElementById(id);
 // ---- Guardado local (puede no estar disponible: la página funciona igual, sin recordar) ----
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-let guests = load(KEY, []); if (!Array.isArray(guests)) guests = [];
+const ESTADOS = [["pendiente", "Por enviar"], ["enviada", "Enviada"], ["confirmada", "Confirmada"]];
+const clampTo = min => n => Math.min(20, Math.max(min, parseInt(n, 10) || min));
+const clamp = clampTo(1), clampKids = clampTo(0);
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+// Deja cada invitado con todos sus campos. Los guardados antes de existir el estado y los niños
+// conservan su marca de enviada y quedan con 0 niños.
+function norm(r){
+  const estado = ESTADOS.some(e => e[0] === r.estado) ? r.estado : (r.enviado ? "enviada" : "pendiente");
+  return {id: r.id || newId(), tipo: r.tipo === "f" ? "f" : "p", nombre: String(r.nombre || "").replace(/\s+/g, " ").trim().slice(0, 40),
+    cupos: clamp(r.cupos), ninos: clampKids(r.ninos), cel: typeof r.cel === "string" ? r.cel.slice(0, 30) : "", estado};
+}
+let guests = load(KEY, []); guests = Array.isArray(guests) ? guests.map(norm).filter(g => g.nombre) : [];
 const opt = Object.assign({msgF: MSG_F, msgP: MSG_P}, load(KEY_OPT, {}));
 
 // ---- Enlace: un código corto que no se puede leer ni editar a mano ----
-const linkFor = g => BASE + "?" + INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos});
+const codeFor = g => INV.encode({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, ninos: g.ninos});
+const linkFor = g => BASE + "?" + codeFor(g);
 const shown = g => g.tipo === "f" ? "Familia " + g.nombre : g.nombre;          // como título: «Familia Barrios»
 const inText = g => g.tipo === "f" ? "la familia " + g.nombre : g.nombre;       // dentro de una frase: «para la familia Barrios»
+const count = (n, one, many) => n + " " + (n === 1 ? one : many);
 const phoneFor = cel => {
   let d = (cel || "").replace(/\D/g, "");
   if (d.length === 10 && d[0] === "3") d = "57" + d;      // celular colombiano sin indicativo
@@ -310,53 +362,109 @@ async function copy(text, okMsg){
 }
 
 // ---- Lista ----
+let editing = null;                                       // id del invitado que se está editando
 function el(tag, cls, text){ const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
 function render(){
   const list = $("list"); list.textContent = "";
   for (const g of guests) {
-    const li = el("li", "guest" + (g.enviado ? " sent" : ""));
+    const li = el("li", "guest" + (g.id === editing ? " editing-now" : "")); li.dataset.estado = g.estado; li.dataset.id = g.id;
     const top = el("div", "top"), who = el("span", "name");
     who.append(el("span", "kind", g.tipo === "f" ? "Familia" : "Persona"), g.nombre);
-    top.append(who, el("span", "seats", g.cupos === 1 ? "1 cupo" : g.cupos + " cupos"));
+    top.append(who, el("span", "editlbl", g.id === editing ? "Editando" : "Editar"));
+    const seats = el("p", "seats"), ad = el("span"), ki = el("span");
+    ad.append("Adultos: ", el("b", null, count(g.cupos, "cupo", "cupos")));
+    ki.append("Niños: ", el("b", null, count(g.ninos, "cupo", "cupos")));
+    seats.append(ad, ki);
     const url = linkFor(g);
     const acts = el("div", "acts");
     const bCopy = el("button", "btn", "Copiar enlace"); bCopy.type = "button";
     bCopy.onclick = () => copy(url, "Enlace copiado");
     const bWa = el("a", "btn fill", "WhatsApp"); bWa.href = waFor(g); bWa.target = "_blank"; bWa.rel = "noopener";
-    const bSent = el("button", "btn" + (g.enviado ? " on" : " ghost"), g.enviado ? "Enviada" : "Marcar enviada"); bSent.type = "button";
-    bSent.setAttribute("aria-pressed", g.enviado ? "true" : "false");
-    bSent.onclick = () => { g.enviado = !g.enviado; save(KEY, guests); render(); };
+    const state = el("label", "state"), sel = el("select", g.estado);
+    sel.setAttribute("aria-label", "Estado de la invitación de " + shown(g));
+    for (const [v, t] of ESTADOS) { const o = el("option", null, t); o.value = v; o.selected = v === g.estado; sel.append(o); }
+    sel.onchange = () => {
+      g.estado = sel.value; save(KEY, guests); render();
+      if (g.estado === "confirmada") toast(shown(g) + " confirmó su asistencia", "ok");
+    };
+    state.append(sel);
     const bDel = el("button", "btn ghost", "Quitar"); bDel.type = "button";
     bDel.onclick = () => {                                   // confirmación en dos toques, sin diálogos
-      if (bDel.dataset.sure) { guests = guests.filter(x => x.id !== g.id); save(KEY, guests); render(); toast("Invitación quitada"); return; }
+      if (bDel.dataset.sure) {
+        guests = guests.filter(x => x.id !== g.id); save(KEY, guests);
+        if (editing === g.id) stopEditing();
+        render(); toast("Invitación quitada"); return;
+      }
       bDel.dataset.sure = "1"; bDel.textContent = "¿Seguro? Quitar"; bDel.className = "btn danger";
       setTimeout(() => { if (bDel.isConnected) { delete bDel.dataset.sure; bDel.textContent = "Quitar"; bDel.className = "btn ghost"; } }, 3000);
     };
-    acts.append(bCopy, bWa, bSent, bDel);
-    li.append(top, el("div", "link", url), acts);
+    acts.append(bCopy, bWa, state, bDel);
+    li.append(top, seats, el("div", "link", url), acts);
+    li.addEventListener("click", e => {                      // tocar la tarjeta (fuera de sus botones) la abre para editar
+      if (e.target.closest("button, a, select, label.state, .link")) return;
+      startEditing(g.id);
+    });
     list.append(li);
   }
-  const seats = guests.reduce((a, g) => a + g.cupos, 0), sent = guests.filter(g => g.enviado).length;
-  $("totals").textContent = guests.length ? `${guests.length} ${guests.length === 1 ? "invitación" : "invitaciones"} · ${seats} ${seats === 1 ? "cupo" : "cupos"} · ${sent} ${sent === 1 ? "enviada" : "enviadas"}` : "";
+  const sum = (arr, k) => arr.reduce((a, g) => a + g[k], 0);
+  const by = v => guests.filter(g => g.estado === v), conf = by("confirmada");
+  const lines = guests.length ? [
+    count(guests.length, "invitación", "invitaciones") + " · " + count(sum(guests, "cupos"), "adulto", "adultos") + " · " + count(sum(guests, "ninos"), "niño", "niños"),
+    by("pendiente").length + " por enviar · " + count(by("enviada").length, "enviada", "enviadas") + " · " + count(conf.length, "confirmada", "confirmadas")
+  ] : [];
+  if (conf.length) lines.push("Confirmados: " + count(sum(conf, "cupos"), "adulto", "adultos") + " y " + count(sum(conf, "ninos"), "niño", "niños"));
+  $("totals").textContent = lines.join("\n");
   $("empty").hidden = guests.length > 0;
   $("copyAll").hidden = guests.length === 0;
   $("exportBtn").hidden = guests.length === 0;
 }
 
-// ---- Formulario ----
-const clamp = n => Math.min(20, Math.max(1, parseInt(n, 10) || 1));
+// ---- Formulario: crear o editar ----
 const tipo = () => $("tipoF").checked ? "f" : "p";
-function setTipo(){
+function setTipoTexts(){
   const f = tipo() === "f";
   $("nombreLbl").textContent = f ? "Apellidos de la familia" : "Nombre del invitado";
   $("nombre").placeholder = f ? "Barrios Roncancio" : "Caleb Barrios";
   $("nombreHint").textContent = f ? "En la invitación aparecerá como «Familia Barrios Roncancio»." : "En la invitación aparecerá tal como lo escribas.";
-  $("cupos").value = f ? 2 : 1;
 }
-$("tipoF").onchange = setTipo; $("tipoP").onchange = setTipo;
-$("menos").onclick = () => { $("cupos").value = clamp(+$("cupos").value - 1); };
-$("mas").onclick = () => { $("cupos").value = clamp(+$("cupos").value + 1); };
+function onTipoChange(){
+  setTipoTexts();
+  if (!editing) { $("cupos").value = tipo() === "f" ? 2 : 1; $("ninos").value = 0; }   // al crear, valores sugeridos
+}
+$("tipoF").onchange = onTipoChange; $("tipoP").onchange = onTipoChange;
+for (const b of document.querySelectorAll(".stepper button")) b.onclick = () => {
+  const input = $(b.dataset.for), fix = b.dataset.for === "ninos" ? clampKids : clamp;
+  input.value = fix(+input.value + +b.dataset.step);
+};
 $("cupos").onblur = () => { $("cupos").value = clamp($("cupos").value); };
+$("ninos").onblur = () => { $("ninos").value = clampKids($("ninos").value); };
+
+function resetForm(t){
+  $("nombre").value = ""; $("cel").value = ""; $("err").hidden = true;
+  (t === "p" ? $("tipoP") : $("tipoF")).checked = true; setTipoTexts();
+  $("cupos").value = t === "p" ? 1 : 2; $("ninos").value = 0;
+}
+function startEditing(id){
+  const g = guests.find(x => x.id === id); if (!g) return;
+  editing = id;
+  (g.tipo === "f" ? $("tipoF") : $("tipoP")).checked = true; setTipoTexts();
+  $("nombre").value = g.nombre; $("cupos").value = g.cupos; $("ninos").value = g.ninos; $("cel").value = g.cel; $("err").hidden = true;
+  $("editName").textContent = shown(g);
+  $("editWarn").hidden = g.estado === "pendiente";
+  $("editBar").hidden = false; $("cancelEdit").hidden = false; $("formActs").classList.add("two");
+  $("submitBtn").textContent = "Guardar cambios"; $("form").classList.add("is-editing");
+  render();
+  $("form").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start"});
+}
+function stopEditing(){
+  const t = tipo();
+  editing = null;
+  $("editBar").hidden = true; $("cancelEdit").hidden = true; $("formActs").classList.remove("two");
+  $("submitBtn").textContent = "Crear invitación"; $("form").classList.remove("is-editing");
+  resetForm(t);
+}
+$("cancelEdit").onclick = () => { stopEditing(); render(); };
+
 $("form").addEventListener("submit", e => {
   e.preventDefault();
   const t = tipo(), err = $("err");
@@ -364,14 +472,28 @@ $("form").addEventListener("submit", e => {
   if (t === "f") nombre = nombre.replace(/^(la\s+)?familia\s+/i, "");   // "Familia" ya se agrega sola
   const fail = msg => { err.textContent = msg; err.hidden = false; $("nombre").focus(); };
   if (!nombre) return fail(t === "f" ? "Escribe los apellidos de la familia." : "Escribe el nombre del invitado.");
-  if (guests.some(g => g.tipo === t && g.nombre.toLowerCase() === nombre.toLowerCase()))
-    return fail("Ya hay una invitación para " + inText({tipo: t, nombre}) + ". Quítala de la lista si quieres crearla de nuevo.");
+  if (guests.some(g => g.id !== editing && g.tipo === t && g.nombre.toLowerCase() === nombre.toLowerCase()))
+    return fail("Ya hay una invitación para " + inText({tipo: t, nombre}) + (editing ? "." : ". Quítala de la lista si quieres crearla de nuevo."));
   err.hidden = true;
-  guests.unshift({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tipo: t, nombre, cupos: clamp($("cupos").value), cel: $("cel").value.trim(), enviado: false});
+  const data = {tipo: t, nombre, cupos: clamp($("cupos").value), ninos: clampKids($("ninos").value), cel: $("cel").value.trim()};
+  let target, msg;
+  if (editing) {
+    target = guests.find(g => g.id === editing);
+    const before = codeFor(target);
+    Object.assign(target, data);
+    msg = codeFor(target) !== before && target.estado !== "pendiente"
+      ? "Cambios guardados. El enlace cambió: envíalo de nuevo a " + inText(target) + "."
+      : "Cambios guardados para " + inText(target);
+    stopEditing();
+  } else {
+    target = Object.assign({id: newId(), estado: "pendiente"}, data);
+    guests.unshift(target);
+    msg = "Invitación creada para " + inText(target);
+    resetForm(t); $("nombre").focus();
+  }
   save(KEY, guests); render();
-  $("nombre").value = ""; $("cel").value = ""; $("cupos").value = t === "f" ? 2 : 1; $("nombre").focus();
-  const card = $("list").firstElementChild; if (card) card.classList.add("new");   // resalta la tarjeta recién creada
-  toast("Invitación creada para " + inText({tipo: t, nombre}), "ok");
+  const card = $("list").querySelector('[data-id="' + target.id + '"]'); if (card) card.classList.add("new");   // resalta la tarjeta
+  toast(msg, "ok");
 });
 
 // ---- Mensajes ----
@@ -379,12 +501,12 @@ $("msgF").value = opt.msgF; $("msgP").value = opt.msgP;
 $("msgF").oninput = () => { opt.msgF = $("msgF").value; save(KEY_OPT, opt); render(); };
 $("msgP").oninput = () => { opt.msgP = $("msgP").value; save(KEY_OPT, opt); render(); };
 $("resetMsg").onclick = () => { opt.msgF = MSG_F; opt.msgP = MSG_P; $("msgF").value = MSG_F; $("msgP").value = MSG_P; save(KEY_OPT, opt); render(); toast("Mensajes restaurados"); };
-$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${g.cupos}): ${linkFor(g)}`).join("\n"), "Lista copiada");
+$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${count(g.cupos, "adulto", "adultos")}, ${count(g.ninos, "niño", "niños")}): ${linkFor(g)}`).join("\n"), "Lista copiada");
 
 // ---- Exportar e importar la lista (un archivo .json que se puede guardar o enviar) ----
 $("exportBtn").onclick = async () => {
-  const data = {app: "boda-invitados", version: 1, exportado: new Date().toISOString(),
-    invitados: guests.map(g => ({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, cel: g.cel || "", enviado: !!g.enviado}))};
+  const data = {app: "boda-invitados", version: 2, exportado: new Date().toISOString(),
+    invitados: guests.map(g => ({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, ninos: g.ninos, cel: g.cel, estado: g.estado}))};
   const name = "invitados-caleb-y-anyi-" + new Date().toISOString().slice(0, 10) + ".json";
   const file = new File([JSON.stringify(data, null, 2)], name, {type: "application/json"});
   // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp...); en computador se descarga.
@@ -404,16 +526,15 @@ $("importFile").onchange = async e => {
   let rows;
   try { const j = JSON.parse(await file.text()); rows = Array.isArray(j) ? j : j && j.invitados; } catch (err) { rows = null; }
   if (!Array.isArray(rows)) return toast("Ese archivo no es una lista de invitados exportada desde aquí.");
+  const rank = s => ESTADOS.findIndex(x => x[0] === s);
   let added = 0, known = 0, bad = 0;
-  for (const r of rows) {
-    const nombre = r && typeof r.nombre === "string" ? r.nombre.replace(/\s+/g, " ").trim().slice(0, 40) : "";
-    if (!nombre) { bad++; continue; }
-    const tipo = r.tipo === "f" ? "f" : "p";
-    const mine = guests.find(g => g.tipo === tipo && g.nombre.toLowerCase() === nombre.toLowerCase());
-    if (mine) { known++; if (r.enviado) mine.enviado = true; continue; }   // la que ya estaba se conserva
-    guests.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + added, tipo, nombre,
-      cupos: clamp(r.cupos), cel: typeof r.cel === "string" ? r.cel.slice(0, 30) : "", enviado: !!r.enviado});
-    added++;
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") { bad++; continue; }
+    const r = norm(Object.assign({}, raw, {id: null}));
+    if (!r.nombre) { bad++; continue; }
+    const mine = guests.find(g => g.tipo === r.tipo && g.nombre.toLowerCase() === r.nombre.toLowerCase());
+    if (mine) { known++; if (rank(r.estado) > rank(mine.estado)) mine.estado = r.estado; continue; }   // la que ya estaba se conserva; avanza su estado si el archivo lo tiene más adelante
+    guests.push(r); added++;
   }
   save(KEY, guests); render();
   toast((added === 0 ? "No se agregó ninguna invitación" : added === 1 ? "Se agregó 1 invitación" : "Se agregaron " + added + " invitaciones") + (known ? "; " + known + " ya " + (known === 1 ? "estaba" : "estaban") : "") + (bad ? "; " + bad + " sin nombre" : "") + ".");

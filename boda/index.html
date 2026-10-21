@@ -403,12 +403,15 @@ const INV = (() => {
   }
 
   const tagOf = plain => { const c = fnv(K.concat(plain)); return [c & 255, (c >>> 8) & 255]; };
-  function encode(g){                                   // {tipo: "f" | "p", nombre, cupos}
-    const name = String(g.nombre).normalize("NFC"), head = (g.tipo === "f" ? 0x80 : 0) | (g.cupos & 31);
+  // Primer byte: 1 bit familia/persona · 1 bit nombre compacto · 1 bit "hay niños" · 5 bits cupos de adultos.
+  // Si hay cupos de niños, el siguiente byte los guarda.
+  function encode(g){                                   // {tipo: "f" | "p", nombre, cupos, ninos}
+    const name = String(g.nombre).normalize("NFC"), ninos = Math.max(0, Math.min(31, g.ninos | 0));
+    const head = (g.tipo === "f" ? 0x80 : 0) | (ninos ? 0x20 : 0) | (g.cupos & 31), kids = ninos ? [ninos] : [];
     const small = pack(name);
     const plain = small && unpack(small) === name
-      ? [head | 0x40].concat(small)                    // nombre compacto
-      : [head].concat(Array.from(new TextEncoder().encode(name)));   // nombre con otros caracteres
+      ? [head | 0x40].concat(kids, small)              // nombre compacto
+      : [head].concat(kids, Array.from(new TextEncoder().encode(name)));   // nombre con otros caracteres
     const tag = tagOf(plain), ks = stream(tag, plain.length);
     return to62(tag.concat(plain.map((v, i) => v ^ ks[i])));
   }
@@ -418,10 +421,10 @@ const INV = (() => {
       const u = from62(tok); if (!u || u.length < 4) return null;
       const tag = u.slice(0, 2), ks = stream(tag, u.length - 2), plain = u.slice(2).map((v, i) => v ^ ks[i]), sum = tagOf(plain);
       if (sum[0] !== tag[0] || sum[1] !== tag[1]) return null;
-      const cupos = plain[0] & 31;
-      const nombre = plain[0] & 0x40 ? unpack(plain.slice(1)) : new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(1)));
+      const cupos = plain[0] & 31, at = plain[0] & 0x20 ? 2 : 1, ninos = at === 2 ? plain[1] : 0;
+      const nombre = plain[0] & 0x40 ? unpack(plain.slice(at)) : new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(plain.slice(at)));
       if (!cupos || !nombre || !nombre.trim()) return null;
-      const g = {tipo: plain[0] & 0x80 ? "f" : "p", cupos, nombre};
+      const g = {tipo: plain[0] & 0x80 ? "f" : "p", cupos, ninos, nombre};
       return encode(g) === tok ? g : null;             // solo se acepta la forma exacta que genera la app
     } catch (e) { return null; }
   }
@@ -448,26 +451,31 @@ const DAY = "19 de noviembre";       // el día de la boda, como se nombra en lo
     no.href = wa("¡Hola, Caleb y Anyi! Con mucho pesar les cuento que no podré acompañarlos en su boda. Los llevo en el corazón y les deseo toda la felicidad. 🤍");
     return;
   }
-  const seats = SEATS === 1 ? "1 cupo" : SEATS + " cupos";
+  // Cupos: los de adultos y, si los hay, los de niños.
+  const KIDS = INVITE.ninos || 0, TOTAL = SEATS + KIDS;
+  const count = (n, one, many) => n + " " + (n === 1 ? one : many);
+  const split = KIDS ? count(SEATS, "adulto", "adultos") + " y " + count(KIDS, "niño", "niños") : "";
+  const seats = count(TOTAL, "cupo", "cupos");
   for (const id of ["gName", "rName"]) { const el = document.getElementById(id); el.textContent = GUEST; el.hidden = false; }
   const g = document.getElementById("gSeats");
-  g.textContent = "Hemos reservado (" + SEATS + ") " + (SEATS === 1 ? "cupo" : "cupos") + " para " + (FAM ? "ustedes" : "ti");
+  g.textContent = "Hemos reservado (" + TOTAL + ") " + (TOTAL === 1 ? "cupo" : "cupos") + " para " + (FAM ? "ustedes" : "ti") + (KIDS ? ": " + split : "");
   g.hidden = false;
   const strong = document.createElement("strong"); strong.style.fontWeight = "500"; strong.textContent = seats;
   const rText = document.getElementById("rText"); rText.textContent = "";
-  rText.append("Hemos reservado ", strong, FAM
-    ? " para ustedes. Cuéntennos si nos acompañan a más tardar el " + DEADLINE + "."
-    : " para ti. Cuéntanos si nos acompañas a más tardar el " + DEADLINE + ".");
+  rText.append("Hemos reservado ", strong, (FAM ? " para ustedes" : " para ti") + (KIDS ? " (" + split + ")" : "") + (FAM
+    ? ". Cuéntennos si nos acompañan a más tardar el " + DEADLINE + "."
+    : ". Cuéntanos si nos acompañas a más tardar el " + DEADLINE + "."));
   // Mensajes que el invitado envía por WhatsApp: llevan su nombre y los cupos que se le reservaron.
+  const ours = (FAM ? "nos" : "me"), detail = KIDS ? " (" + split + ")" : "";
+  const mine = (TOTAL === 1 ? "el cupo que " + ours + " reservaron" : "los " + TOTAL + " cupos que " + ours + " reservaron") + detail;
+  const freed = (TOTAL === 1 ? "queda libre " : "quedan libres ") + mine;
   if (FAM) {
-    const mine = SEATS === 1 ? "el cupo que nos reservaron" : "los " + SEATS + " cupos que nos reservaron";
     yes.textContent = "Sí, ahí estaremos"; no.textContent = "No podremos asistir";
     yes.href = wa("¡Hola, Caleb y Anyi! 🤍 Somos la familia " + INVITE.nombre + " y con mucha alegría les confirmamos que estaremos en su boda, con " + mine + ". ¡Nos vemos el " + DAY + "!");
-    no.href = wa("¡Hola, Caleb y Anyi! Somos la familia " + INVITE.nombre + ". Con mucho pesar les contamos que no podremos acompañarlos en su boda, así que " + (SEATS === 1 ? "queda libre " : "quedan libres ") + mine + ". Los llevamos en el corazón y les deseamos toda la felicidad. 🤍");
+    no.href = wa("¡Hola, Caleb y Anyi! Somos la familia " + INVITE.nombre + ". Con mucho pesar les contamos que no podremos acompañarlos en su boda, así que " + freed + ". Los llevamos en el corazón y les deseamos toda la felicidad. 🤍");
   } else {
-    const mine = SEATS === 1 ? "el cupo que me reservaron" : "los " + SEATS + " cupos que me reservaron";
     yes.href = wa("¡Hola, Caleb y Anyi! 🤍 Soy " + INVITE.nombre + " y con mucha alegría les confirmo que estaré en su boda, con " + mine + ". ¡Nos vemos el " + DAY + "!");
-    no.href = wa("¡Hola, Caleb y Anyi! Soy " + INVITE.nombre + ". Con mucho pesar les cuento que no podré acompañarlos en su boda, así que " + (SEATS === 1 ? "queda libre " : "quedan libres ") + mine + ". Los llevo en el corazón y les deseo toda la felicidad. 🤍");
+    no.href = wa("¡Hola, Caleb y Anyi! Soy " + INVITE.nombre + ". Con mucho pesar les cuento que no podré acompañarlos en su boda, así que " + freed + ". Los llevo en el corazón y les deseo toda la felicidad. 🤍");
   }
 })();
 
