@@ -70,6 +70,9 @@ summary{cursor:pointer;font-size:.82rem;font-weight:500;color:var(--navy)}
 details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .hint{font-size:.8rem;color:var(--ink-soft)}
 .err{font-size:.82rem;color:var(--danger)}
+.similar{font-size:.82rem;line-height:1.5;color:#5c4210;background:#fbf3e2;border:1px solid #e6cc96;border-radius:10px;padding:10px 12px;margin-top:-6px}
+.similar strong{font-weight:600}
+.similar b{font-weight:600;color:#3d2c09}
 .totals{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}
 .totals h2{font-family:var(--script);font-weight:400;font-size:2.2rem;line-height:1}
 .totals p{font-size:.84rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:pre-line;text-align:right}
@@ -133,6 +136,7 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <input type="text" id="nombre" autocomplete="off" autocapitalize="words" maxlength="40" placeholder="Barrios Roncancio" required>
       <small id="nombreHint">En la invitación aparecerá como «Familia Barrios Roncancio».</small>
     </label>
+    <p class="similar" id="similar" role="status" hidden></p>
     <div class="row2">
       <label for="cupos">Cupos de adultos
         <span class="stepper">
@@ -419,6 +423,64 @@ function render(){
   $("exportBtn").hidden = guests.length === 0;
 }
 
+// ---- Invitaciones parecidas ----
+// Compara sin tildes ni mayúsculas y sin la palabra "familia". Se consideran parecidas si el nombre es
+// el mismo, si uno contiene al otro, si comparten un nombre o apellido, o si alguno difiere por una o
+// dos letras (errores de escritura como «Roncansio» por «Roncancio»).
+const SKIP = new Set(["de", "del", "la", "las", "los", "el", "y", "e", "da", "do", "dos", "van", "von"]);
+const plain = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  .replace(/^(la\s+)?familia\s+/, "").replace(/[^a-z0-9]+/g, " ").trim();
+const words = s => plain(s).split(" ").filter(w => w.length > 2 && !SKIP.has(w));
+function editDistance(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let prev = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+const nearWord = (a, b) => a === b || (Math.min(a.length, b.length) >= 4 && editDistance(a, b) <= (Math.min(a.length, b.length) >= 7 ? 2 : 1));
+// Devuelve las invitaciones parecidas al nombre escrito, de la más a la menos parecida.
+function similarTo(nombre, excludeId){
+  const p = plain(nombre), w = words(nombre);
+  if (!w.length) return [];                              // solo palabras como «de la»: nada que comparar
+  const found = [];
+  for (const g of guests) {
+    if (g.id === excludeId) continue;
+    const q = plain(g.nombre), v = words(g.nombre);
+    let score = 0;
+    if (q === p) score = 4;                                                         // mismo nombre
+    else if ((" " + q + " ").includes(" " + p + " ") || (" " + p + " ").includes(" " + q + " ")) score = 3;   // uno contiene al otro
+    else if (p.length >= 6 && editDistance(p, q) <= 2) score = 3;                   // casi igual
+    else if (w.some(a => v.some(b => nearWord(a, b)))) score = w.filter(a => v.some(b => nearWord(a, b))).length >= 2 ? 2 : 1;
+    if (score) found.push({g, score});
+  }
+  return found.sort((a, b) => b.score - a.score).map(x => x.g);
+}
+let similarOk = "";                                       // nombre para el que ya se aceptó crear pese a las parecidas
+// Al editar, solo se avisa si el nombre cambió respecto al guardado.
+const unchangedName = () => { const g = editing && guests.find(x => x.id === editing); return !!g && plain(g.nombre) === plain($("nombre").value); };
+function showSimilar(){
+  const box = $("similar"), list = unchangedName() ? [] : similarTo($("nombre").value, editing);
+  box.textContent = "";
+  if (!list.length) { box.hidden = true; return list; }
+  const names = list.slice(0, 5).map(shown);
+  box.append(el("strong", null, list.length === 1 ? "Ya hay una invitación parecida: " : "Ya hay invitaciones parecidas: "));
+  names.forEach((n, i) => { if (i) box.append(i === names.length - 1 && list.length <= 5 ? " y " : ", "); box.append(el("b", null, n)); });
+  if (list.length > 5) box.append(" y " + count(list.length - 5, "otra", "otras"));
+  box.append(editing ? ". Revisa que no sea la misma antes de guardar." : ". Revisa que no sea la misma antes de crearla.");
+  box.hidden = false;
+  return list;
+}
+function resetSimilar(){
+  similarOk = "";
+  $("submitBtn").textContent = editing ? "Guardar cambios" : "Crear invitación";
+  showSimilar();
+}
+$("nombre").addEventListener("input", resetSimilar);
+
 // ---- Formulario: crear o editar ----
 const tipo = () => $("tipoF").checked ? "f" : "p";
 function setTipoTexts(){
@@ -428,7 +490,7 @@ function setTipoTexts(){
   $("nombreHint").textContent = f ? "En la invitación aparecerá como «Familia Barrios Roncancio»." : "En la invitación aparecerá tal como lo escribas.";
 }
 function onTipoChange(){
-  setTipoTexts();
+  setTipoTexts(); resetSimilar();
   if (!editing) { $("cupos").value = tipo() === "f" ? 2 : 1; $("ninos").value = 0; }   // al crear, valores sugeridos
 }
 $("tipoF").onchange = onTipoChange; $("tipoP").onchange = onTipoChange;
@@ -443,6 +505,7 @@ function resetForm(t){
   $("nombre").value = ""; $("cel").value = ""; $("err").hidden = true;
   (t === "p" ? $("tipoP") : $("tipoF")).checked = true; setTipoTexts();
   $("cupos").value = t === "p" ? 1 : 2; $("ninos").value = 0;
+  similarOk = ""; $("similar").hidden = true; $("submitBtn").textContent = editing ? "Guardar cambios" : "Crear invitación";
 }
 function startEditing(id){
   const g = guests.find(x => x.id === id); if (!g) return;
@@ -453,7 +516,7 @@ function startEditing(id){
   $("editWarn").hidden = g.estado === "pendiente";
   $("editBar").hidden = false; $("cancelEdit").hidden = false; $("formActs").classList.add("two");
   $("submitBtn").textContent = "Guardar cambios"; $("form").classList.add("is-editing");
-  render();
+  render(); resetSimilar();
   $("form").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start"});
 }
 function stopEditing(){
@@ -472,8 +535,16 @@ $("form").addEventListener("submit", e => {
   if (t === "f") nombre = nombre.replace(/^(la\s+)?familia\s+/i, "");   // "Familia" ya se agrega sola
   const fail = msg => { err.textContent = msg; err.hidden = false; $("nombre").focus(); };
   if (!nombre) return fail(t === "f" ? "Escribe los apellidos de la familia." : "Escribe el nombre del invitado.");
-  if (guests.some(g => g.id !== editing && g.tipo === t && g.nombre.toLowerCase() === nombre.toLowerCase()))
-    return fail("Ya hay una invitación para " + inText({tipo: t, nombre}) + (editing ? "." : ". Quítala de la lista si quieres crearla de nuevo."));
+  const same = guests.find(g => g.id !== editing && g.tipo === t && plain(g.nombre) === plain(nombre));   // igual, sin contar tildes ni mayúsculas
+  if (same) return fail("Ya hay una invitación para " + inText(same) + (editing ? "." : ". Tócala en la lista si quieres editarla."));
+  const key = t + "|" + plain(nombre);
+  if (similarOk !== key && showSimilar().length) {      // parecidas: se avisa y se pide un segundo toque para seguir
+    similarOk = key;
+    $("submitBtn").textContent = editing ? "Guardar de todas formas" : "Crear de todas formas";
+    err.textContent = "Si de verdad es otra invitación, toca «" + $("submitBtn").textContent + "».";
+    err.hidden = false; $("similar").scrollIntoView({block: "nearest"});
+    return;
+  }
   err.hidden = true;
   const data = {tipo: t, nombre, cupos: clamp($("cupos").value), ninos: clampKids($("ninos").value), cel: $("cel").value.trim()};
   let target, msg;
