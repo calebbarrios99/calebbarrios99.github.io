@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f1eef6">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Comparte con nosotros las fotos que tomaste en nuestra boda.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Caleb &amp; Anyi">
+<meta property="og:title" content="Caleb &amp; Anyi · Comparte tus fotos">
+<meta property="og:description" content="Comparte con nosotros las fotos que tomaste en nuestra boda.">
+<meta property="og:image" content="https://calebbarrios99.github.io/boda/invitacion.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Sobre azul con sello de Caleb y Anyi">
+<meta property="og:url" content="https://calebbarrios99.github.io/boda/fotos/">
+<meta property="og:locale" content="es_CO">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f3b57'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23e6d8bd'/%3E%3C/svg%3E">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Caleb &amp; Anyi · Nuestras fotos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Montserrat:wght@300;400;500&display=swap">
+<style>
+/* Misma papelería que la invitación: fondo lila claro, sobre azul noche con lacre champaña y papeles sueltos.
+   El sobre es el botón para elegir fotos; al elegirlas se abre y las fotos quedan como pequeñas copias impresas. */
+:root{
+  --bg:#f1eef6;
+  --paper:#fdfcff;
+  --ink:#262a3b;
+  --ink-soft:#6a6e86;
+  --navy:#2f3b57;
+  --navy-deep:#222b42;
+  --navy-light:#3c4b6e;
+  --blue:#6f8fc7;
+  --seal:#e6d8bd;
+  --seal-deep:#c5b189;
+  --line:#cfd4e6;
+  --rose:#a5525c;          /* solo para avisar que una foto no salió */
+  --script:"Allura","Snell Roundhand","Apple Chancery",cursive;
+  --body:"Montserrat","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:radial-gradient(120% 60% at 50% 0,#f8f6fc,var(--bg) 70%) var(--bg);color:var(--ink);font-family:var(--body);font-weight:300;font-size:1rem;line-height:1.65;padding-inline:20px;padding-block:44px 80px;overflow-x:hidden}
+main{max-width:460px;margin-inline:auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:56px}
+h1,h2,p{margin:0}
+.caps{text-transform:uppercase;letter-spacing:.18em;font-size:.72rem;font-weight:400;line-height:1.8}
+.script{font-family:var(--script);font-weight:400;line-height:1.1}
+.soft{color:var(--ink-soft)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sprigs{display:flex;justify-content:center;gap:10px;color:var(--blue)}
+.sprigs svg{width:64px;height:22px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.sprigs svg:first-child{transform:scaleX(-1)}
+
+/* ---------- Encabezado ---------- */
+.top{display:flex;flex-direction:column;align-items:center;gap:6px}
+.names-top{font-family:var(--script);font-weight:400;font-size:clamp(3.2rem,16vw,4.4rem);line-height:1.05}
+
+.invite{width:100%;background:var(--paper);padding:40px 24px 44px;border-radius:30px 30px 64px 64px / 30px 30px 46px 46px;border:1px solid var(--line);box-shadow:0 0 0 5px var(--paper),0 0 0 6px var(--line),0 24px 34px rgba(34,43,66,.18);display:flex;flex-direction:column;align-items:center;gap:16px}
+.invite .lead{font-family:var(--script);font-weight:400;font-size:2.7rem;line-height:1.1;color:var(--navy)}
+.invite .vow{max-width:28ch;font-size:1.02rem;line-height:1.75;text-wrap:balance}
+
+/* ---------- Papel para subir ---------- */
+.paper{width:100%;background:var(--paper);padding:36px 24px 32px;box-shadow:0 16px 26px rgba(34,43,66,.14);display:flex;flex-direction:column;align-items:center;gap:22px}
+.paper h2{font-family:var(--script);font-weight:400;font-size:2.7rem;line-height:1.1}
+.field{width:100%;max-width:300px;display:flex;flex-direction:column;gap:2px}
+.field input{font:inherit;font-size:1.05rem;font-weight:400;color:var(--ink);text-align:center;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:8px 4px;width:100%;min-width:0;transition:border-color .2s}
+.field input::placeholder{color:#a3a7bb;font-weight:300}
+.field input:focus{outline:none;border-bottom-color:var(--navy)}
+
+/* Sobre (copiado de la invitación) */
+.env-wrap{width:100%;max-width:390px;padding-top:0;transition:padding-top .9s ease}
+.env-wrap.open{padding-top:40%}
+.env-shadow{filter:drop-shadow(0 18px 20px rgba(34,43,66,.3))}
+.env{position:relative;display:block;width:100%;aspect-ratio:3/2;border-radius:3px;background:var(--navy-deep);cursor:pointer;perspective:1400px;-webkit-tap-highlight-color:transparent}
+.vh:focus-visible+.env-wrap .env{outline:2px solid var(--navy);outline-offset:8px}
+.fold{position:absolute;inset:0}
+.fold.l{background:linear-gradient(90deg,var(--navy-light),var(--navy));clip-path:polygon(0 0,52% 52%,0 100%)}
+.fold.r{background:linear-gradient(270deg,var(--navy-light),var(--navy));clip-path:polygon(100% 0,48% 52%,100% 100%)}
+.fold.b{background:linear-gradient(0deg,#2a3550,#334060);clip-path:polygon(0 100%,50% 44%,100% 100%)}
+.flap{position:absolute;left:0;top:0;width:100%;height:58%;transform-origin:top;transform-style:preserve-3d;transition:transform .95s cubic-bezier(.6,.05,.3,1);z-index:3}
+.flap i{position:absolute;inset:0;clip-path:polygon(0 0,100% 0,56% 94%,50% 100%,44% 94%);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.flap .out{background:linear-gradient(180deg,#44547a,var(--navy) 85%)}
+.flap .in{transform:rotateX(180deg);background:var(--navy);clip-path:polygon(0 100%,100% 100%,56% 6%,50% 0,44% 6%)}
+.flap .in::after{content:"";position:absolute;inset:0;clip-path:polygon(3% 96%,97% 96%,56% 10%,50% 5%,44% 10%);background:#f8f9fe url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='140' viewBox='0 0 120 140' fill='none' stroke='%235673ab' stroke-width='1.3' stroke-linecap='round'%3E%3Cpath d='M60 140C58 100 70 70 52 30'/%3E%3Cpath d='M57 96c-18-4-28-16-30-30 16 2 28 12 31 28z' fill='%23c5d3ee'/%3E%3Cpath d='M63 70c16-2 28-12 32-26-16 0-28 8-33 24z' fill='%23dfe7f7'/%3E%3Cpath d='M52 30c-10-2-16-10-15-20 6 0 10 3 13 8 0-7 3-12 8-16 5 5 7 10 5 17 4-4 9-5 14-3-1 9-8 15-25 14z' fill='%239db4de'/%3E%3Ccircle cx='98' cy='108' r='5' fill='%239db4de'/%3E%3Ccircle cx='106' cy='98' r='3.5'/%3E%3Ccircle cx='90' cy='97' r='3'/%3E%3Cpath d='M98 113c0 10-6 18-14 24M14 120c6-8 6-18 0-28-6 10-6 20 0 28z'/%3E%3C/svg%3E") center/34% auto}
+.open .flap{transform:rotateX(180deg)}
+.seal,.medal{border-radius:47% 53% 51% 49% / 52% 48% 53% 47%;background:radial-gradient(circle at 35% 30%,#f7efdd,var(--seal) 55%,var(--seal-deep));box-shadow:inset 0 0 0 3px rgba(255,255,255,.35),inset 0 0 0 5px rgba(150,130,90,.3),0 4px 8px rgba(15,20,40,.5);display:grid;place-items:center;color:#96804f}
+.seal{position:absolute;left:50%;top:57%;width:20%;aspect-ratio:1;translate:-50% -50%;z-index:4;transition:opacity .4s,scale .4s;animation:pulse 2.6s ease-in-out infinite}
+.seal svg{width:48%;height:48%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@keyframes pulse{50%{scale:1.07}}
+.open .seal{opacity:0;scale:.5;animation:none}
+.hint{position:absolute;left:0;right:0;bottom:8%;z-index:4;color:#dfe5f4;font-size:.6rem}
+
+/* Fotos elegidas: pequeñas copias impresas */
+.grid{list-style:none;margin:0;padding:6px 4px 0;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:24px 14px}
+.tile{position:relative;aspect-ratio:1;background:#eef1f9;box-shadow:0 0 0 4px #fff,0 0 0 5px var(--line),0 8px 12px rgba(34,43,66,.16);animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+.tile:nth-child(3n+1){rotate:-1.6deg}
+.tile:nth-child(3n+2){rotate:1.1deg}
+.tile:nth-child(3n){rotate:-.5deg}
+.tile img{display:block;width:100%;height:100%;object-fit:cover}
+.tile .ph{position:absolute;inset:0;display:none;place-items:center;color:var(--blue)}
+.tile .ph svg{width:40%;height:40%;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tile.noimg img{display:none}
+.tile.noimg .ph{display:grid}
+.tile::after{content:"";position:absolute;inset:0;background:rgba(34,43,66,0);transition:background .3s;pointer-events:none}
+.tile[data-s=wait]::after{background:rgba(34,43,66,.32)}
+.tile[data-s=up]::after{background:rgba(34,43,66,.48)}
+.tile[data-s=no]{opacity:.55}
+.spin{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:2px solid rgba(230,216,189,.3);border-top-color:var(--seal);z-index:2;display:none;animation:turn .9s linear infinite}
+.tile[data-s=up] .spin{display:block}
+@keyframes turn{to{rotate:360deg}}
+.badge{position:absolute;right:-7px;bottom:-7px;width:24px;height:24px;border-radius:50%;display:none;place-items:center;z-index:2;box-shadow:0 0 0 2px #fff;font:500 .8rem/1 var(--body)}
+.badge svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.tile[data-s=ok] .badge{display:grid;background:var(--navy);color:var(--seal)}
+.tile[data-s=err] .badge,.tile[data-s=no] .badge{display:grid;background:var(--rose);color:#fff}
+.x{position:absolute;right:-9px;top:-9px;width:26px;height:26px;border:0;border-radius:50%;padding:0;display:none;place-items:center;z-index:3;background:var(--navy);color:var(--paper);box-shadow:0 0 0 2px #fff;cursor:pointer}
+.x::before{content:"";position:absolute;inset:-8px}
+.x svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.tile:is([data-s=ready],[data-s=err],[data-s=no]) .x{display:grid}
+.x:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+@keyframes rise{from{opacity:0;translate:0 18px}}
+
+.actions{width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.bar{width:100%;height:2px;background:var(--line);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;background:var(--navy);transition:width .5s ease}
+.pill{display:inline-block;padding:9px 20px;border:1px solid var(--navy);border-radius:999px;background:transparent;color:var(--navy);text-decoration:none;text-transform:uppercase;letter-spacing:.16em;font:400 .66rem/1.6 var(--body);cursor:pointer;transition:background .2s,color .2s,opacity .2s}
+.pill.fill{background:var(--navy);color:var(--paper)}
+.pill.big{padding:14px 30px;font-size:.72rem}
+.pill:hover,.pill:focus-visible{background:var(--navy-light);border-color:var(--navy-light);color:var(--paper);outline:none}
+.pill:focus-visible{box-shadow:0 0 0 3px var(--paper),0 0 0 4px var(--navy)}
+.pill:disabled{cursor:default;opacity:.7}
+.pill:disabled:hover{background:var(--navy);border-color:var(--navy)}
+.note{font-size:.86rem;line-height:1.55;color:var(--rose);max-width:30ch}
+.note.ok{color:var(--ink-soft)}
+.foot{font-size:.6rem}
+
+/* ---------- Gracias ---------- */
+.thanks{width:100%;background:var(--navy);color:#f3f1fa;padding:40px 24px 38px;border-radius:26px;box-shadow:0 0 0 4px var(--bg),0 0 0 5px var(--navy),0 22px 30px rgba(34,43,66,.28);display:flex;flex-direction:column;align-items:center;gap:16px;animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.thanks h2{font-family:var(--script);font-weight:400;font-size:3.2rem;line-height:1;color:var(--seal)}
+.thanks p{max-width:28ch}
+.thanks .caps{color:#c7cee3;font-size:.62rem}
+.medal{width:64px;aspect-ratio:1;font-family:var(--script);font-size:1.55rem}
+.pill.light{border-color:var(--seal);color:var(--seal);margin-top:6px}
+.pill.light:hover,.pill.light:focus-visible{background:var(--seal);border-color:var(--seal);color:var(--navy)}
+.pill.light:focus-visible{box-shadow:0 0 0 3px var(--navy),0 0 0 4px var(--seal)}
+
+.closing{display:flex;flex-direction:column;gap:12px;align-items:center}
+.closing .script{font-size:3rem}
+
+@media (min-width:700px){body{padding-block:64px 110px}}
+@media (prefers-reduced-motion:reduce){.flap,.env-wrap,.seal{transition:none}.seal,.tile,.thanks{animation:none!important}.spin{animation-duration:2.4s}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="sprig" viewBox="0 0 120 40">
+    <path d="M4 34C36 31 72 22 116 6"/>
+    <path d="M28 31c2-10 10-15 19-14-3 9-9 14-19 14z"/>
+    <path d="M50 27c-1 7 4 11 11 11 0-7-4-10-11-11z"/>
+    <path d="M70 20c3-9 11-13 19-11-3 8-10 12-19 11z"/>
+    <path d="M91 14c0 6 4 10 10 9-1-6-4-9-10-9z"/>
+  </symbol>
+  <symbol id="cam" viewBox="0 0 24 24"><path d="M3.5 8.5h3.2l1.7-2.3h7.2l1.7 2.3h3.2v10.3H3.5z"/><circle cx="12" cy="13.4" r="3.5"/></symbol>
+</svg>
+
+<main>
+  <header class="top">
+    <h1 class="names-top">Caleb &amp; Anyi</h1>
+    <p class="caps soft">19 · 11 · 2026</p>
+  </header>
+
+  <section class="invite">
+    <div class="sprigs" aria-hidden="true"><svg><use href="#sprig"/></svg><svg><use href="#sprig"/></svg></div>
+    <h2 class="lead">Nuestros momentos</h2>
+    <p class="vow">Cada foto que tomaste guarda un pedacito de nuestro día. Compártelas con nosotros y llegarán directo a nuestro álbum.</p>
+  </section>
+
+  <section class="paper" id="drop" aria-labelledby="dropTitle">
+    <h2 id="dropTitle">Comparte tus fotos</h2>
+
+    <label class="field">
+      <span class="caps soft">¿Quién nos las envía?</span>
+      <input type="text" id="who" autocomplete="name" autocapitalize="words" maxlength="60" placeholder="Tu nombre">
+    </label>
+
+    <input class="vh" type="file" id="pick" accept="image/*" multiple>
+    <div class="env-wrap" id="envWrap">
+      <div class="env-shadow">
+        <label class="env" for="pick">
+          <span class="fold l"></span><span class="fold r"></span><span class="fold b"></span>
+          <span class="flap"><i class="out"></i><i class="in"></i></span>
+          <span class="seal" aria-hidden="true"><svg><use href="#cam"/></svg></span>
+          <span class="hint caps" id="hint">Toca el sello para elegir tus fotos</span>
+        </label>
+      </div>
+    </div>
+
+    <ul class="grid" id="grid" aria-label="Fotos elegidas" hidden></ul>
+
+    <div class="actions" id="actions" hidden>
+      <p class="caps soft" id="sum"></p>
+      <div class="bar" id="bar" hidden><i></i></div>
+      <button class="pill fill big" id="send" type="button">Enviar fotos</button>
+    </div>
+    <p class="note" id="note" role="status" hidden></p>
+    <p class="caps soft foot">Solo fotos · Puedes elegir varias a la vez</p>
+  </section>
+
+  <section class="thanks" id="thanks" aria-labelledby="thanksTitle" tabindex="-1" hidden>
+    <span class="medal" aria-hidden="true">C·A</span>
+    <h2 id="thanksTitle">¡Gracias!</h2>
+    <p id="thanksText">Tus fotos ya llegaron a nuestro álbum.</p>
+    <p class="caps">Gracias por guardar este día con nosotros</p>
+    <label class="pill light" for="pick">Subir más fotos</label>
+  </section>
+
+  <section class="closing">
+    <div class="sprigs" aria-hidden="true"><svg><use href="#sprig"/></svg><svg><use href="#sprig"/></svg></div>
+    <p class="script">Con amor</p>
+    <p class="caps">Caleb &amp; Anyi · 19 · 11 · 2026</p>
+  </section>
+</main>
+
+<script>
+// Dirección de la aplicación web de Google Apps Script que guarda las fotos en Google Drive.
+// Se obtiene al implementar boda/fotos/album.gs (termina en /exec). Mientras esté vacía, la página no envía nada.
+const SCRIPT_URL = "";
+
+const MAX_ORIGINAL = 8 * 1024 * 1024;    // hasta este peso la foto viaja tal cual, en calidad original
+const MAX_LADO = 3200;                   // las más pesadas se reducen a este lado mayor (se sigue viendo nítida)
+const MAX_ENVIO = 30 * 1024 * 1024;      // si una foto no se puede reducir, se envía original solo hasta este peso
+const A_LA_VEZ = 2;                      // fotos subiendo al mismo tiempo (cuida el internet del salón)
+const KEY_NOMBRE = "boda-fotos-nombre";
+
+const $ = id => document.getElementById(id);
+const pick = $("pick"), grid = $("grid"), send = $("send"), who = $("who"), note = $("note"), sum = $("sum"),
+      bar = $("bar"), actions = $("actions"), drop = $("drop"), thanks = $("thanks"), envWrap = $("envWrap"), hint = $("hint");
+const calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
+const fotos = [];        // {file, li, s: ready | wait | up | ok | err | no, url}
+let ocupado = false, lote = [], wake = null;
+
+// El nombre se recuerda en este teléfono para la próxima vez.
+try { who.value = localStorage.getItem(KEY_NOMBRE) || ""; } catch (e) {}
+who.addEventListener("input", () => { try { localStorage.setItem(KEY_NOMBRE, who.value.trim()); } catch (e) {} });
+
+const plural = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
+const esFoto = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(f.name);
+const espera = ms => new Promise(r => setTimeout(r, ms));
+function decir(texto, bien){ note.textContent = texto; note.hidden = !texto; note.classList.toggle("ok", !!bien); }
+
+// ---------- Elegir fotos ----------
+pick.addEventListener("change", () => {
+  const files = Array.from(pick.files || []); pick.value = "";
+  if (!files.length || ocupado) return;
+  const nuevas = files.filter(esFoto), otros = files.length - nuevas.length;
+  thanks.hidden = true; drop.hidden = false;
+  for (const f of nuevas) {
+    if (fotos.some(x => x.file.name === f.name && x.file.size === f.size && x.file.lastModified === f.lastModified)) continue;
+    agregar(f);
+  }
+  decir(otros ? (otros === 1 ? "Dejamos por fuera 1 archivo que no es una foto." : "Dejamos por fuera " + otros + " archivos que no son fotos.") : "");
+  pintar();
+  if (fotos.length) setTimeout(() => actions.scrollIntoView({behavior: calm ? "auto" : "smooth", block: "center"}), calm ? 0 : 450);
+});
+
+function agregar(file){
+  const li = document.createElement("li"), url = URL.createObjectURL(file);
+  li.className = "tile";
+  li.innerHTML = '<img alt="" decoding="async"><span class="ph" aria-hidden="true"><svg><use href="#cam"/></svg></span>' +
+    '<span class="spin" aria-hidden="true"></span><span class="badge" aria-hidden="true"></span>' +
+    '<button class="x" type="button" aria-label="Quitar esta foto"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>';
+  const img = li.querySelector("img");
+  img.onerror = () => li.classList.add("noimg");   // p. ej. fotos HEIC en navegadores que no las muestran: igual se envían
+  img.src = url;
+  const item = {file, li, url, s: "ready"};
+  li.querySelector(".x").addEventListener("click", () => quitar(item));
+  fotos.push(item); grid.append(li); estado(item, "ready");
+}
+
+function quitar(item){
+  if (ocupado) return;
+  URL.revokeObjectURL(item.url); item.li.remove();
+  fotos.splice(fotos.indexOf(item), 1);
+  if (!fotos.some(x => x.s === "err" || x.s === "no")) decir("");
+  pintar();
+}
+
+function estado(item, s){
+  item.s = s; item.li.dataset.s = s;
+  const b = item.li.querySelector(".badge");
+  b.innerHTML = s === "ok" ? '<svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7"/></svg>' : s === "err" || s === "no" ? "!" : "";
+  item.li.querySelector("img").alt = s === "ok" ? "Foto enviada" : s === "err" || s === "no" ? "Foto sin enviar" : "Foto elegida";
+}
+
+// Pinta el sobre, el resumen y el botón según cómo van las fotos.
+function pintar(){
+  const n = fotos.length, cuenta = s => fotos.filter(x => x.s === s).length;
+  const listas = cuenta("ready"), fallas = cuenta("err"), pendientes = listas + fallas;
+  envWrap.classList.toggle("open", n > 0);
+  hint.textContent = n ? "Toca el sobre para agregar más" : "Toca el sello para elegir tus fotos";
+  grid.hidden = !n; actions.hidden = !n;
+  if (ocupado) {
+    const hechas = lote.filter(x => x.s === "ok" || x.s === "err" || x.s === "no").length;
+    sum.textContent = "Enviando " + Math.min(hechas + 1, lote.length) + " de " + lote.length;
+    bar.hidden = false; bar.firstElementChild.style.width = (hechas / lote.length * 100) + "%";
+    send.disabled = true; send.textContent = "Enviando…";
+    return;
+  }
+  bar.hidden = true; send.disabled = false; send.hidden = !pendientes;
+  if (fallas && !listas) { sum.textContent = plural(fallas, "foto no se envió", "fotos no se enviaron"); send.textContent = "Reintentar " + plural(fallas, "foto", "fotos"); }
+  else { sum.textContent = pendientes ? plural(pendientes, "foto lista para enviar", "fotos listas para enviar") : ""; send.textContent = "Enviar " + plural(pendientes, "foto", "fotos"); }
+}
+
+// ---------- Enviar ----------
+send.addEventListener("click", async () => {
+  if (ocupado) return;
+  if (!SCRIPT_URL) { decir("El álbum todavía no está listo para recibir fotos. Intenta de nuevo más tarde."); return; }
+  lote = fotos.filter(x => x.s === "ready" || x.s === "err");
+  if (!lote.length) return;
+  ocupado = true; decir(""); despierto(true);
+  lote.forEach(x => estado(x, "wait")); pintar();
+  const nombre = who.value.trim();
+  let i = 0;
+  const trabajador = async () => { while (i < lote.length) await subir(lote[i++], nombre); };
+  await Promise.all(Array.from({length: Math.min(A_LA_VEZ, lote.length)}, trabajador));
+  ocupado = false; despierto(false);
+
+  const fallas = fotos.filter(x => x.s === "err").length, rechazadas = fotos.filter(x => x.s === "no").length,
+        enviadas = fotos.filter(x => x.s === "ok").length;
+  if (fallas) { decir("Parece que se fue el internet. Revisa tu conexión y toca «Reintentar»; las demás ya llegaron."); pintar(); return; }
+  if (rechazadas) { decir(rechazadas === 1 ? "Una foto es demasiado pesada y no se pudo enviar. Puedes quitarla." : rechazadas + " fotos son demasiado pesadas y no se pudieron enviar. Puedes quitarlas."); pintar(); if (!enviadas) return; }
+  pintar();
+  await espera(rechazadas ? 2200 : 700);
+  terminar(enviadas);
+});
+
+async function subir(item, nombre){
+  estado(item, "up"); pintar();
+  let datos;
+  try { datos = await preparar(item.file); }
+  catch (e) { estado(item, "no"); pintar(); return; }
+  for (let intento = 0; intento < 3; intento++) {
+    try {
+      await enviar({nombre, archivo: datos.nombre, tipo: datos.tipo, datos: await base64(datos.blob)});
+      estado(item, "ok"); pintar(); return;
+    } catch (e) {
+      if (e.final) { estado(item, "no"); pintar(); return; }
+      await espera(1500 * (intento + 1));
+    }
+  }
+  estado(item, "err"); pintar();
+}
+
+// Fotos de hasta 8 MB van originales. Las más pesadas se reducen a 3200 px en JPEG de alta calidad.
+async function preparar(file){
+  const tipo = file.type || tipoPorNombre(file.name);
+  if (file.size <= MAX_ORIGINAL) return {blob: file, nombre: file.name, tipo};
+  try {
+    const img = await cargar(file);
+    const k = Math.min(1, MAX_LADO / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.9));
+    c.width = c.height = 0;
+    if (blob && blob.size < file.size) return {blob, nombre: file.name.replace(/\.[^.]+$/, "") + ".jpg", tipo: "image/jpeg"};
+  } catch (e) {}
+  if (file.size <= MAX_ENVIO) return {blob: file, nombre: file.name, tipo};
+  throw Object.assign(new Error("pesada"), {final: true});
+}
+function cargar(file){
+  return new Promise((ok, ko) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); ok(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); ko(new Error("imagen")); };
+    im.src = u;
+  });
+}
+function tipoPorNombre(n){
+  const ext = (n.match(/\.([^.]+)$/) || [])[1] || "";
+  return ({heic: "image/heic", heif: "image/heif", png: "image/png", webp: "image/webp", gif: "image/gif", avif: "image/avif"})[ext.toLowerCase()] || "image/jpeg";
+}
+function base64(blob){
+  return new Promise((ok, ko) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1] || "");
+    r.onerror = () => ko(new Error("lectura"));
+    r.readAsDataURL(blob);
+  });
+}
+
+// Se envía como texto plano para que el navegador no pida permiso previo (Apps Script no lo atiende).
+async function enviar(cuerpo){
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 180000);
+  try {
+    const r = await fetch(SCRIPT_URL, {method: "POST", body: JSON.stringify(cuerpo), signal: ctl.signal});
+    let j = null; try { j = await r.json(); } catch (e) {}
+    if (j && j.ok) return;
+    const err = new Error(j && j.error || "respuesta");
+    if (j && (j.error === "solo-fotos" || j.error === "tamano")) err.final = true;
+    throw err;
+  } finally { clearTimeout(t); }
+}
+
+function terminar(enviadas){
+  for (const x of fotos.splice(0)) { URL.revokeObjectURL(x.url); x.li.remove(); }
+  decir(""); pintar();
+  const quien = who.value.trim().split(/\s+/)[0];
+  const frase = enviadas === 1 ? "tu foto ya llegó" : "tus " + enviadas + " fotos ya llegaron";
+  $("thanksText").textContent = (quien ? quien + ", " + frase : frase[0].toUpperCase() + frase.slice(1)) + " a nuestro álbum.";
+  drop.hidden = true; thanks.hidden = false;
+  thanks.focus({preventScroll: true});
+  thanks.scrollIntoView({behavior: calm ? "auto" : "smooth", block: "center"});
+}
+
+// Mientras sube, la pantalla no se apaga y se avisa si intentan cerrar la página.
+async function despierto(on){
+  try {
+    if (on && "wakeLock" in navigator) wake = await navigator.wakeLock.request("screen");
+    else if (!on && wake) { await wake.release(); wake = null; }
+  } catch (e) {}
+}
+addEventListener("beforeunload", e => { if (ocupado) { e.preventDefault(); e.returnValue = ""; } });
+
+pintar();
+</script>
+</body>
+</html>
