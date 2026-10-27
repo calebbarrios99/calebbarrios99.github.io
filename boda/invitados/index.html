@@ -87,6 +87,13 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .guest[data-estado="confirmada"]{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)}
 .guest.editing-now{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy)}
 .guest .editlbl{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--navy);white-space:nowrap;align-self:flex-start;padding-top:2px}
+.guest .tag{display:block;width:max-content;max-width:100%;margin-top:6px;font-size:.74rem;font-weight:500;line-height:1.35;color:var(--navy);background:#eef2fa;border:1px solid #d5def0;border-radius:999px;padding:3px 11px;overflow-wrap:anywhere}
+.search{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;margin-block:-8px}
+.search input{font:inherit;font-size:1rem;color:var(--ink);width:100%;border:1px solid var(--line);border-radius:999px;padding:12px 44px 12px 42px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236a6e86' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") 15px 50%/18px no-repeat;-webkit-appearance:none;appearance:none;box-shadow:0 6px 16px rgba(34,43,66,.06)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.search input:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
+.search button{position:absolute;right:8px;top:50%;translate:0 -50%;width:32px;height:32px;border:0;border-radius:50%;background:var(--bg);color:var(--ink-soft);font-size:1.2rem;line-height:1;cursor:pointer}
+.searchinfo{margin-top:-4px}
 .guest .seats{font-size:.84rem;color:var(--ink-soft);margin-top:-4px;display:flex;flex-wrap:wrap;gap:2px 14px}
 .guest .seats b{font-weight:600;color:var(--ink)}
 .state{position:relative;display:block}
@@ -137,6 +144,11 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <small id="nombreHint">En la invitación aparecerá como «Familia Barrios Roncancio».</small>
     </label>
     <p class="similar" id="similar" role="status" hidden></p>
+    <label for="etiqueta">Etiqueta <small>(opcional, solo la ven ustedes)</small>
+      <input type="text" id="etiqueta" list="etiquetas" maxlength="40" autocomplete="off" autocapitalize="sentences" placeholder="Ej.: tíos de Anyi">
+      <small>No aparece en la invitación. Sirve para reconocerla en la lista y en la búsqueda.</small>
+    </label>
+    <datalist id="etiquetas"></datalist>
     <div class="row2">
       <label for="cupos">Cupos de adultos
         <span class="stepper">
@@ -182,6 +194,11 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <h2 id="listTitle">Lista</h2>
       <p id="totals"></p>
     </div>
+    <div class="search" id="searchBar" hidden>
+      <input type="search" id="buscar" autocomplete="off" enterkeyhint="search" placeholder="Buscar por nombre, etiqueta o estado" aria-label="Buscar invitaciones">
+      <button type="button" id="clearSearch" aria-label="Borrar la búsqueda" hidden>×</button>
+    </div>
+    <p class="hint searchinfo" id="searchInfo" role="status" hidden></p>
     <div class="tools">
       <button class="btn" type="button" id="exportBtn" hidden>Exportar lista</button>
       <button class="btn" type="button" id="importBtn">Importar lista</button>
@@ -320,7 +337,8 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 function norm(r){
   const estado = ESTADOS.some(e => e[0] === r.estado) ? r.estado : (r.enviado ? "enviada" : "pendiente");
   return {id: r.id || newId(), tipo: r.tipo === "f" ? "f" : "p", nombre: String(r.nombre || "").replace(/\s+/g, " ").trim().slice(0, 40),
-    cupos: clamp(r.cupos), ninos: clampKids(r.ninos), cel: typeof r.cel === "string" ? r.cel.slice(0, 30) : "", estado};
+    cupos: clamp(r.cupos), ninos: clampKids(r.ninos), cel: typeof r.cel === "string" ? r.cel.slice(0, 30) : "", estado,
+    etiqueta: typeof r.etiqueta === "string" ? r.etiqueta.replace(/\s+/g, " ").trim().slice(0, 40) : ""};   // la etiqueta no va en el enlace
 }
 let guests = load(KEY, []); guests = Array.isArray(guests) ? guests.map(norm).filter(g => g.nombre) : [];
 const opt = Object.assign({msgF: MSG_F, msgP: MSG_P}, load(KEY_OPT, {}));
@@ -368,12 +386,20 @@ async function copy(text, okMsg){
 // ---- Lista ----
 let editing = null;                                       // id del invitado que se está editando
 function el(tag, cls, text){ const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+// Búsqueda: sin tildes ni mayúsculas, en el nombre, la etiqueta, el estado y el WhatsApp.
+const fold = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const estadoTxt = g => (ESTADOS.find(e => e[0] === g.estado) || ESTADOS[0])[1];
+const matches = (g, q) => { const hay = fold([shown(g), g.etiqueta, estadoTxt(g), g.cel].join(" ")); return q.every(w => hay.includes(w)); };
+const label = g => shown(g) + (g.etiqueta ? " (" + g.etiqueta + ")" : "");
 function render(){
   const list = $("list"); list.textContent = "";
-  for (const g of guests) {
+  const raw = $("buscar").value.trim(), q = fold(raw).split(/\s+/).filter(Boolean);
+  const visible = q.length ? guests.filter(g => matches(g, q)) : guests;
+  for (const g of visible) {
     const li = el("li", "guest" + (g.id === editing ? " editing-now" : "")); li.dataset.estado = g.estado; li.dataset.id = g.id;
     const top = el("div", "top"), who = el("span", "name");
     who.append(el("span", "kind", g.tipo === "f" ? "Familia" : "Persona"), g.nombre);
+    if (g.etiqueta) who.append(el("span", "tag", g.etiqueta));
     top.append(who, el("span", "editlbl", g.id === editing ? "Editando" : "Editar"));
     const seats = el("p", "seats"), ad = el("span"), ki = el("span");
     ad.append("Adultos: ", el("b", null, count(g.cupos, "cupo", "cupos")));
@@ -419,6 +445,15 @@ function render(){
   if (conf.length) lines.push("Confirmados: " + count(sum(conf, "cupos"), "adulto", "adultos") + " y " + count(sum(conf, "ninos"), "niño", "niños"));
   $("totals").textContent = lines.join("\n");
   $("empty").hidden = guests.length > 0;
+  $("searchBar").hidden = guests.length === 0;
+  $("clearSearch").hidden = !raw;
+  const info = $("searchInfo");
+  info.hidden = !q.length || !guests.length;
+  info.textContent = !q.length ? "" : visible.length
+    ? "Mostrando " + visible.length + " de " + count(guests.length, "invitación", "invitaciones") + "."
+    : "No hay invitaciones que coincidan con «" + raw + "».";
+  const tags = [...new Set(guests.map(g => g.etiqueta).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  $("etiquetas").textContent = ""; for (const t of tags) { const o = el("option"); o.value = t; $("etiquetas").append(o); }   // sugerencias al escribir una etiqueta
   $("copyAll").hidden = guests.length === 0;
   $("exportBtn").hidden = guests.length === 0;
 }
@@ -466,7 +501,7 @@ function showSimilar(){
   const box = $("similar"), list = unchangedName() ? [] : similarTo($("nombre").value, editing);
   box.textContent = "";
   if (!list.length) { box.hidden = true; return list; }
-  const names = list.slice(0, 5).map(shown);
+  const names = list.slice(0, 5).map(label);
   box.append(el("strong", null, list.length === 1 ? "Ya hay una invitación parecida: " : "Ya hay invitaciones parecidas: "));
   names.forEach((n, i) => { if (i) box.append(i === names.length - 1 && list.length <= 5 ? " y " : ", "); box.append(el("b", null, n)); });
   if (list.length > 5) box.append(" y " + count(list.length - 5, "otra", "otras"));
@@ -502,7 +537,7 @@ $("cupos").onblur = () => { $("cupos").value = clamp($("cupos").value); };
 $("ninos").onblur = () => { $("ninos").value = clampKids($("ninos").value); };
 
 function resetForm(t){
-  $("nombre").value = ""; $("cel").value = ""; $("err").hidden = true;
+  $("nombre").value = ""; $("cel").value = ""; $("etiqueta").value = ""; $("err").hidden = true;
   (t === "p" ? $("tipoP") : $("tipoF")).checked = true; setTipoTexts();
   $("cupos").value = t === "p" ? 1 : 2; $("ninos").value = 0;
   similarOk = ""; $("similar").hidden = true; $("submitBtn").textContent = editing ? "Guardar cambios" : "Crear invitación";
@@ -511,8 +546,8 @@ function startEditing(id){
   const g = guests.find(x => x.id === id); if (!g) return;
   editing = id;
   (g.tipo === "f" ? $("tipoF") : $("tipoP")).checked = true; setTipoTexts();
-  $("nombre").value = g.nombre; $("cupos").value = g.cupos; $("ninos").value = g.ninos; $("cel").value = g.cel; $("err").hidden = true;
-  $("editName").textContent = shown(g);
+  $("nombre").value = g.nombre; $("cupos").value = g.cupos; $("ninos").value = g.ninos; $("cel").value = g.cel; $("etiqueta").value = g.etiqueta; $("err").hidden = true;
+  $("editName").textContent = label(g);
   $("editWarn").hidden = g.estado === "pendiente";
   $("editBar").hidden = false; $("cancelEdit").hidden = false; $("formActs").classList.add("two");
   $("submitBtn").textContent = "Guardar cambios"; $("form").classList.add("is-editing");
@@ -546,7 +581,8 @@ $("form").addEventListener("submit", e => {
     return;
   }
   err.hidden = true;
-  const data = {tipo: t, nombre, cupos: clamp($("cupos").value), ninos: clampKids($("ninos").value), cel: $("cel").value.trim()};
+  const data = {tipo: t, nombre, cupos: clamp($("cupos").value), ninos: clampKids($("ninos").value), cel: $("cel").value.trim(),
+    etiqueta: $("etiqueta").value.replace(/\s+/g, " ").trim().slice(0, 40)};
   let target, msg;
   if (editing) {
     target = guests.find(g => g.id === editing);
@@ -559,6 +595,7 @@ $("form").addEventListener("submit", e => {
   } else {
     target = Object.assign({id: newId(), estado: "pendiente"}, data);
     guests.unshift(target);
+    $("buscar").value = "";                                // que la nueva se vea aunque hubiera una búsqueda
     msg = "Invitación creada para " + inText(target);
     resetForm(t); $("nombre").focus();
   }
@@ -567,17 +604,21 @@ $("form").addEventListener("submit", e => {
   toast(msg, "ok");
 });
 
+// ---- Buscador ----
+$("buscar").addEventListener("input", render);
+$("clearSearch").onclick = () => { $("buscar").value = ""; render(); $("buscar").focus(); };
+
 // ---- Mensajes ----
 $("msgF").value = opt.msgF; $("msgP").value = opt.msgP;
 $("msgF").oninput = () => { opt.msgF = $("msgF").value; save(KEY_OPT, opt); render(); };
 $("msgP").oninput = () => { opt.msgP = $("msgP").value; save(KEY_OPT, opt); render(); };
 $("resetMsg").onclick = () => { opt.msgF = MSG_F; opt.msgP = MSG_P; $("msgF").value = MSG_F; $("msgP").value = MSG_P; save(KEY_OPT, opt); render(); toast("Mensajes restaurados"); };
-$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)} (${count(g.cupos, "adulto", "adultos")}, ${count(g.ninos, "niño", "niños")}): ${linkFor(g)}`).join("\n"), "Lista copiada");
+$("copyAll").onclick = () => copy(guests.map(g => `${shown(g)}${g.etiqueta ? " · " + g.etiqueta : ""} (${count(g.cupos, "adulto", "adultos")}, ${count(g.ninos, "niño", "niños")}): ${linkFor(g)}`).join("\n"), "Lista copiada");
 
 // ---- Exportar e importar la lista (un archivo .json que se puede guardar o enviar) ----
 $("exportBtn").onclick = async () => {
   const data = {app: "boda-invitados", version: 2, exportado: new Date().toISOString(),
-    invitados: guests.map(g => ({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, ninos: g.ninos, cel: g.cel, estado: g.estado}))};
+    invitados: guests.map(g => ({tipo: g.tipo, nombre: g.nombre, cupos: g.cupos, ninos: g.ninos, cel: g.cel, estado: g.estado, etiqueta: g.etiqueta}))};
   const name = "invitados-caleb-y-anyi-" + new Date().toISOString().slice(0, 10) + ".json";
   const file = new File([JSON.stringify(data, null, 2)], name, {type: "application/json"});
   // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp...); en computador se descarga.
@@ -604,7 +645,7 @@ $("importFile").onchange = async e => {
     const r = norm(Object.assign({}, raw, {id: null}));
     if (!r.nombre) { bad++; continue; }
     const mine = guests.find(g => g.tipo === r.tipo && g.nombre.toLowerCase() === r.nombre.toLowerCase());
-    if (mine) { known++; if (rank(r.estado) > rank(mine.estado)) mine.estado = r.estado; continue; }   // la que ya estaba se conserva; avanza su estado si el archivo lo tiene más adelante
+    if (mine) { known++; if (rank(r.estado) > rank(mine.estado)) mine.estado = r.estado; if (!mine.etiqueta && r.etiqueta) mine.etiqueta = r.etiqueta; continue; }   // la que ya estaba se conserva; avanza su estado si el archivo lo tiene más adelante
     guests.push(r); added++;
   }
   save(KEY, guests); render();
