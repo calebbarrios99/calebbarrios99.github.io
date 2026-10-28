@@ -85,6 +85,7 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .guest:hover{border-color:var(--ink-soft)}
 .guest[data-estado="enviada"]{border-color:var(--blue)}
 .guest[data-estado="confirmada"]{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)}
+.guest[data-estado="no_asiste"]{border-color:var(--danger);box-shadow:inset 4px 0 0 var(--danger)}
 .guest.editing-now{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy)}
 .guest .editlbl{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--navy);white-space:nowrap;align-self:flex-start;padding-top:2px}
 .guest .tag{display:block;width:max-content;max-width:100%;margin-top:6px;font-size:.74rem;font-weight:500;line-height:1.35;color:var(--navy);background:#eef2fa;border:1px solid #d5def0;border-radius:999px;padding:3px 11px;overflow-wrap:anywhere}
@@ -101,7 +102,8 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 .state::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-70%) rotate(45deg);pointer-events:none;color:var(--ink-soft)}
 .state select.enviada{border-color:var(--blue);color:var(--navy);background:#eef2fa}
 .state select.confirmada{border-color:var(--ok);background:var(--ok);color:#fff}
-.state:has(select.confirmada)::after{color:#fff}
+.state select.no_asiste{border-color:var(--danger);background:var(--danger);color:#fff}
+.state:has(select.confirmada)::after,.state:has(select.no_asiste)::after{color:#fff}
 .state select:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 .guest .link{font-size:.76rem;color:var(--navy);background:var(--bg);border-radius:8px;padding:9px 11px;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
 .guest .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -195,7 +197,7 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <p id="totals"></p>
     </div>
     <div class="search" id="searchBar" hidden>
-      <input type="search" id="buscar" autocomplete="off" enterkeyhint="search" placeholder="Buscar por nombre, etiqueta o estado" aria-label="Buscar invitaciones">
+      <input type="search" id="buscar" autocomplete="off" enterkeyhint="search" placeholder="Buscar nombre, etiqueta o estado" aria-label="Buscar invitaciones">
       <button type="button" id="clearSearch" aria-label="Borrar la búsqueda" hidden>×</button>
     </div>
     <p class="hint searchinfo" id="searchInfo" role="status" hidden></p>
@@ -328,7 +330,7 @@ const $ = id => document.getElementById(id);
 // ---- Guardado local (puede no estar disponible: la página funciona igual, sin recordar) ----
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-const ESTADOS = [["pendiente", "Por enviar"], ["enviada", "Enviada"], ["confirmada", "Confirmada"]];
+const ESTADOS = [["pendiente", "Por enviar"], ["enviada", "Enviada"], ["confirmada", "Confirmada"], ["no_asiste", "No asistirá"]];
 const clampTo = min => n => Math.min(20, Math.max(min, parseInt(n, 10) || min));
 const clamp = clampTo(1), clampKids = clampTo(0);
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -416,6 +418,7 @@ function render(){
     sel.onchange = () => {
       g.estado = sel.value; save(KEY, guests); render();
       if (g.estado === "confirmada") toast(shown(g) + " confirmó su asistencia", "ok");
+      else if (g.estado === "no_asiste") toast(shown(g) + " no asistirá");
     };
     state.append(sel);
     const bDel = el("button", "btn ghost", "Quitar"); bDel.type = "button";
@@ -440,9 +443,11 @@ function render(){
   const by = v => guests.filter(g => g.estado === v), conf = by("confirmada");
   const lines = guests.length ? [
     count(guests.length, "invitación", "invitaciones") + " · " + count(sum(guests, "cupos"), "adulto", "adultos") + " · " + count(sum(guests, "ninos"), "niño", "niños"),
-    by("pendiente").length + " por enviar · " + count(by("enviada").length, "enviada", "enviadas") + " · " + count(conf.length, "confirmada", "confirmadas")
+    by("pendiente").length + " por enviar · " + count(by("enviada").length, "enviada", "enviadas") + " · " + count(conf.length, "confirmada", "confirmadas") + " · " + by("no_asiste").length + " no " + (by("no_asiste").length === 1 ? "asistirá" : "asistirán")
   ] : [];
   if (conf.length) lines.push("Confirmados: " + count(sum(conf, "cupos"), "adulto", "adultos") + " y " + count(sum(conf, "ninos"), "niño", "niños"));
+  const nope = by("no_asiste");
+  if (nope.length) lines.push("Cupos liberados: " + count(sum(nope, "cupos"), "adulto", "adultos") + " y " + count(sum(nope, "ninos"), "niño", "niños"));
   $("totals").textContent = lines.join("\n");
   $("empty").hidden = guests.length > 0;
   $("searchBar").hidden = guests.length === 0;
@@ -638,7 +643,7 @@ $("importFile").onchange = async e => {
   let rows;
   try { const j = JSON.parse(await file.text()); rows = Array.isArray(j) ? j : j && j.invitados; } catch (err) { rows = null; }
   if (!Array.isArray(rows)) return toast("Ese archivo no es una lista de invitados exportada desde aquí.");
-  const rank = s => ESTADOS.findIndex(x => x[0] === s);
+  const rank = s => ({pendiente: 0, enviada: 1, confirmada: 2, no_asiste: 2})[s] || 0;   // una respuesta no reemplaza a la otra
   let added = 0, known = 0, bad = 0;
   for (const raw of rows) {
     if (!raw || typeof raw !== "object") { bad++; continue; }
