@@ -186,12 +186,37 @@ h1,h2,p{margin:0}
 .closing{display:flex;flex-direction:column;gap:12px;align-items:center}
 .closing .script{font-size:3rem}
 
-@media (min-width:700px){body{padding-block:64px 110px}}
-@media (prefers-reduced-motion:reduce){.flap,.env-wrap,.seal,.hint{transition:none}.seal,.disc,.opened .content>*{animation:none!important}.toggle,.fab{transition:none}.loading,.fab.nudge{animation:none}}
+/* ---------- Aviso tras el cierre de la lista: una sola tarjeta en lugar de la invitación ---------- */
+.gate main{visibility:hidden}        /* un instante, mientras se decide si va la invitación o el aviso */
+.notice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;min-height:calc(100vh - 124px);min-height:calc(100svh - 124px);animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.notice .invite{gap:14px;padding:38px 26px 36px}
+.notice .greet{font-weight:500;font-size:1.04rem;line-height:1.45;color:var(--navy);text-wrap:balance;margin-top:2px}
+.notice .letter{max-width:31ch;font-size:.97rem;line-height:1.72;text-wrap:pretty}
+.rule{display:flex;align-items:center;gap:12px;width:58%;margin-top:6px;color:var(--blue)}
+.rule::before,.rule::after{content:"";flex:1;height:1px;background:var(--line)}
+.rule svg{width:15px;height:15px;flex:none;fill:rgba(111,143,199,.14);stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
+.sign{display:flex;flex-direction:column;align-items:center;gap:2px}
+.sign .script{font-size:2.3rem;color:var(--navy)}
+
+@media (min-width:700px){body{padding-block:64px 110px}.notice{min-height:calc(100vh - 174px);min-height:calc(100svh - 174px)}}
+@media (prefers-reduced-motion:reduce){.flap,.env-wrap,.seal,.hint{transition:none}.seal,.disc,.opened .content>*,.notice{animation:none!important}.toggle,.fab{transition:none}.loading,.fab.nudge{animation:none}}
 </style>
 </head>
 <body>
 <script>document.documentElement.classList.add("js")</script>
+<script src="confirmados.js"></script>
+<script>
+// Respuestas de los invitados (boda/confirmados.js, que los novios sincronizan desde su lista). Cuentan desde
+// el 8 de noviembre de 2026, ya cerrada la lista, y solo si el archivo trae alguna; si no carga, todo sigue igual.
+const RESPUESTAS = (() => {
+  try {
+    const c = window.CONFIRMADOS, list = v => Array.isArray(v) ? v.map(String) : [];
+    const si = list(c && c.si), no = list(c && c.no);
+    return si.length + no.length > 0 && Date.now() >= Date.parse("2026-11-08T00:00:00-05:00") ? {si, no} : null;
+  } catch (e) { return null; }
+})();
+if (RESPUESTAS && location.search.length > 1) document.documentElement.classList.add("gate");
+</script>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 40">
@@ -285,7 +310,7 @@ h1,h2,p{margin:0}
         <div class="clock"><span id="cur">0:00</span><span id="dur">3:54</span></div>
         <p class="status" id="status" role="status" hidden>No pudimos reproducir la canción aquí. <a href="https://youtu.be/KAYS-lM2ZNs" target="_blank" rel="noopener">Escúchala en YouTube</a></p>
       </div>
-      <audio id="au" preload="metadata" playsinline src="contigo.mp3"></audio>
+      <audio id="au" preload="metadata" playsinline data-src="contigo.mp3"></audio>
     </section>
 
     <section class="block" aria-label="Cuenta regresiva">
@@ -316,6 +341,19 @@ h1,h2,p{margin:0}
       <p class="caps">Caleb &amp; Anyi · 19 · 11 · 2026</p>
     </section>
   </div>
+
+  <section class="notice" id="notice" aria-labelledby="nTitle" hidden>
+    <h1 class="names-top">Caleb &amp; Anyi</h1>
+    <article class="invite">
+      <div class="sprigs" aria-hidden="true"><svg><use href="#sprig"/></svg><svg><use href="#sprig"/></svg></div>
+      <h2 class="lead" id="nTitle"></h2>
+      <p class="greet" id="nHello"></p>
+      <p class="letter" id="nText1"></p>
+      <p class="letter" id="nText2"></p>
+      <div class="rule" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.6-4.7-9.6-9.4C.9 7.6 3 4.2 6.4 4.2c2.3 0 3.9 1.5 5.6 3.6 1.7-2.1 3.3-3.6 5.6-3.6 3.4 0 5.5 3.4 4 6.9-2 4.7-9.6 9.4-9.6 9.4z"/></svg></div>
+      <p class="sign"><span class="caps soft" id="nBye"></span><span class="script">Caleb &amp; Anyi</span></p>
+    </article>
+  </section>
 </main>
 <button class="fab" id="fab" type="button" aria-label="Pausar la canción" hidden>
   <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
@@ -479,9 +517,62 @@ const DAY = "19 de noviembre";       // el día de la boda, como se nombra en lo
   }
 })();
 
+// Huella de una invitación: el tipo y el nombre, sin tildes, mayúsculas ni espacios de más, resumidos en
+// 8 caracteres (FNV-1a de 32 bits). boda/confirmados.js guarda solo huellas, nunca nombres ni enlaces.
+// Este bloque es idéntico en boda/index.html y en boda/invitados/index.html: si cambia, cámbialo en los dos.
+const huella = (tipo, nombre) => {
+  const key = tipo + "|" + String(nombre).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+  let h = 0x811c9dc5;
+  for (const b of new TextEncoder().encode(key)) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+};
+
+// Cerrada la lista, el enlace de quien no aparece entre los confirmados muestra una tarjeta en lugar de la
+// invitación: un agradecimiento si avisó que no asistirá, o un aviso cordial si no alcanzó a confirmar.
+// Sin código válido en el enlace, o si la lista de respuestas está vacía, la página se ve como siempre.
+const AVISO = (() => {
+  try {
+    if (!RESPUESTAS || !INVITE) return "";
+    const h = huella(INVITE.tipo, INVITE.nombre);
+    return RESPUESTAS.si.includes(h) ? "" : RESPUESTAS.no.includes(h) ? "gracias" : "cerrada";
+  } catch (e) { return ""; }
+})();
+if (AVISO) (function showNotice(){
+  const n = INVITE.nombre;
+  const TEXTOS = {
+    cerrada: FAM ? {
+      hola: "Querida familia " + n + ":",
+      p1: "Para cuidar cada detalle de nuestra boda, cerramos la lista de invitados el 7 de noviembre. Como no recibimos su confirmación a tiempo, esta invitación ya no está activa y no pudimos incluirlos en la lista final de la celebración.",
+      p2: "Entendemos que los días pasan volando, y de verdad agradecemos su cariño de siempre. Los llevamos en el corazón este 19 de noviembre."
+    } : {
+      hola: "Hola, " + n + ":",
+      p1: "Para cuidar cada detalle de nuestra boda, cerramos la lista de invitados el 7 de noviembre. Como no recibimos tu confirmación a tiempo, esta invitación ya no está activa y no pudimos incluirte en la lista final de la celebración.",
+      p2: "Entendemos que los días pasan volando, y de verdad agradecemos tu cariño de siempre. Te llevamos en el corazón este 19 de noviembre."
+    },
+    gracias: FAM ? {
+      hola: "Querida familia " + n + ":",
+      p1: "Gracias por avisarnos. Lamentamos que no puedan acompañarnos el 19 de noviembre, pero agradecemos de corazón su cariño y sus buenos deseos.",
+      p2: "Los llevamos con nosotros en este día tan especial."
+    } : {
+      hola: "Hola, " + n + ":",
+      p1: "Gracias por avisarnos. Lamentamos que no puedas acompañarnos el 19 de noviembre, pero agradecemos de corazón tu cariño y tus buenos deseos.",
+      p2: "Te llevamos con nosotros en este día tan especial."
+    }
+  };
+  const t = TEXTOS[AVISO], set = (id, text) => { document.getElementById(id).textContent = text.replace(/(\d+) de /g, "$1 de "); };   // «19 de» no se parte entre líneas
+  set("nTitle", AVISO === "gracias" ? "Gracias" : "Con cariño");
+  set("nHello", t.hola); set("nText1", t.p1); set("nText2", t.p2);
+  set("nBye", AVISO === "gracias" ? "Con cariño," : "Un abrazo,");   // el título del aviso ya dice «Con cariño»
+  document.querySelector(".cover").hidden = true;
+  document.getElementById("content").hidden = true;
+  document.getElementById("fab").hidden = true;
+  document.getElementById("notice").hidden = false;
+})();
+document.documentElement.classList.remove("gate");
+
 // Al tocar el sello: se abre el sobre y, con ese mismo toque, empieza la canción.
 env.addEventListener("click", () => {
-  if (main.classList.contains("opened")) return;
+  if (AVISO || main.classList.contains("opened")) return;
   main.classList.add("opened");
   env.setAttribute("aria-expanded", "true");
   env.setAttribute("aria-label", "Sobre abierto");
@@ -540,6 +631,7 @@ au.addEventListener("ended", () => { au.currentTime = 0; paint(); progress(); })
 for (const e of ["play", "pause"]) au.addEventListener(e, paint);
 for (const e of ["timeupdate", "loadedmetadata"]) au.addEventListener(e, progress);
 au.addEventListener("error", fail);
+if (!AVISO) au.src = au.dataset.src;   // con la tarjeta de aviso, la canción ni se descarga
 
 const pad = n => String(n).padStart(2, "0");
 function tick(){

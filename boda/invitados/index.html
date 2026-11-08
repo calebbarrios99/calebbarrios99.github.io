@@ -31,7 +31,7 @@ h1{font-family:var(--script);font-weight:400;font-size:3.2rem;line-height:1.1}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 10px 22px rgba(34,43,66,.08)}
 label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:500;min-width:0}
 label small{font-weight:400;color:var(--ink-soft)}
-input[type=text],input[type=tel],input[type=number],textarea{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;min-width:0}
+input[type=text],input[type=tel],input[type=number],input[type=password],textarea{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;min-width:0}
 textarea{min-height:230px;resize:vertical;line-height:1.5}
 input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 .seg{border:0;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0;min-width:0}
@@ -65,6 +65,13 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,
 .btn.danger{border-color:var(--danger);color:var(--danger)}
 .btn.danger:hover{background:var(--danger);color:#fff}
 .btn.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled,.btn:disabled:hover{opacity:.7;cursor:progress;background:var(--navy);border-color:var(--navy);color:var(--paper)}
+.linkbtn{font:inherit;font-size:.8rem;font-weight:500;color:var(--navy);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sync{display:flex;flex-direction:column;gap:10px}
+.syncmeta{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px}
+.syncmeta:not(:has(> :not([hidden]))){display:none}
+.keypanel{background:var(--paper);border:1px solid var(--navy);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 22px rgba(34,43,66,.08)}
+.keypanel .linkbtn{align-self:flex-start}
 details{border-top:1px solid var(--line);padding-top:14px}
 summary{cursor:pointer;font-size:.82rem;font-weight:500;color:var(--navy)}
 details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
@@ -115,7 +122,7 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
 /* Aviso temporal: arriba, para que el teclado del teléfono no lo tape */
 #toast{position:fixed;left:50%;top:12px;margin-top:env(safe-area-inset-top,0px);transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:10px;width:max-content;max-width:calc(100vw - 32px);background:var(--navy);color:#fff;font-size:.9rem;font-weight:500;line-height:1.35;padding:13px 20px;border-radius:14px;box-shadow:0 10px 24px rgba(34,43,66,.35);animation:drop .28s ease-out}
 #toast.ok{background:var(--ok)}
-#toast.ok::before{content:"";flex:none;width:9px;height:16px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);margin:-4px 4px 0 2px}
+#toast.ok:not(.bare)::before{content:"";flex:none;width:9px;height:16px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);margin:-4px 4px 0 2px}
 @keyframes drop{from{opacity:0;transform:translate(-50%,-14px)}}
 .guest.new{animation:flash 2.4s ease-out}
 @keyframes flash{0%,35%{box-shadow:0 0 0 3px var(--ok)}100%{box-shadow:0 0 0 3px transparent}}
@@ -205,6 +212,23 @@ details>div{display:flex;flex-direction:column;gap:14px;margin-top:14px}
       <button class="btn" type="button" id="exportBtn" hidden>Exportar lista</button>
       <button class="btn" type="button" id="importBtn">Importar lista</button>
       <button class="btn ghost wide" type="button" id="copyAll" hidden>Copiar toda la lista</button>
+    </div>
+    <div class="sync" id="syncBox" hidden>
+      <button class="btn fill big" type="button" id="syncBtn">Sincronizar lista con servidor</button>
+      <p class="hint">Envía a la invitación quién confirmó y quién no asistirá: las invitaciones confirmadas se ven igual y las demás muestran un aviso cordial.</p>
+      <p class="hint syncmeta"><span id="syncLast" hidden></span><button class="linkbtn" type="button" id="keyChange" hidden>Cambiar clave</button></p>
+      <form class="keypanel" id="keyPanel" novalidate hidden>
+        <label for="ghToken">Clave de GitHub
+          <input type="password" id="ghToken" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
+          <small>Es el token que crearon en GitHub para este repositorio. Se guarda solo en este navegador.</small>
+        </label>
+        <p class="hint" id="keyMsg" role="status" hidden></p>
+        <div class="formacts two">
+          <button class="btn fill" type="submit">Guardar</button>
+          <button class="btn ghost" type="button" id="keyCancel">Cancelar</button>
+        </div>
+        <button class="linkbtn" type="button" id="keyForget" hidden>Olvidar la clave guardada</button>
+      </form>
     </div>
     <p class="hint">Toca una invitación para editarla. La lista se guarda solo en este navegador. Expórtala para tener una copia o para pasarla a otro teléfono; los enlaces ya enviados siguen funcionando aunque la lista se borre.</p>
     <ul id="list"></ul>
@@ -368,11 +392,11 @@ function placeToast(){                 // lo mantiene en la parte visible aunque
   el.style.top = (vv.offsetTop + 12) + "px";
   el.style.left = (vv.offsetLeft + vv.width / 2) + "px";
 }
-function toast(t, kind){
+function toast(t, kind, ms){
   const el = $("toast");
   el.hidden = true; void el.offsetWidth;             // reinicia la animación si ya había un aviso
   el.textContent = t; el.className = kind || ""; el.hidden = false; placeToast();
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, kind === "ok" ? 3500 : 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, ms || (kind === "ok" ? 3500 : 2600));
 }
 if (window.visualViewport) for (const ev of ["resize", "scroll"]) visualViewport.addEventListener(ev, placeToast);
 async function copy(text, okMsg){
@@ -461,6 +485,8 @@ function render(){
   $("etiquetas").textContent = ""; for (const t of tags) { const o = el("option"); o.value = t; $("etiquetas").append(o); }   // sugerencias al escribir una etiqueta
   $("copyAll").hidden = guests.length === 0;
   $("exportBtn").hidden = guests.length === 0;
+  $("syncBox").hidden = guests.length === 0;
+  renderSync();
 }
 
 // ---- Invitaciones parecidas ----
@@ -656,6 +682,120 @@ $("importFile").onchange = async e => {
   save(KEY, guests); render();
   toast((added === 0 ? "No se agregó ninguna invitación" : added === 1 ? "Se agregó 1 invitación" : "Se agregaron " + added + " invitaciones") + (known ? "; " + known + " ya " + (known === 1 ? "estaba" : "estaban") : "") + (bad ? "; " + bad + " sin nombre" : "") + ".");
 };
+
+// ---- Sincronizar con la invitación (boda/confirmados.js en GitHub) ----
+// La invitación lee ese archivo: quien confirmó ve la invitación de siempre, quien avisó que no asistirá ve un
+// agradecimiento y quien no respondió, un aviso cordial. El archivo lleva solo huellas, nunca nombres ni enlaces.
+
+// Huella de una invitación: el tipo y el nombre, sin tildes, mayúsculas ni espacios de más, resumidos en
+// 8 caracteres (FNV-1a de 32 bits). boda/confirmados.js guarda solo huellas, nunca nombres ni enlaces.
+// Este bloque es idéntico en boda/index.html y en boda/invitados/index.html: si cambia, cámbialo en los dos.
+const huella = (tipo, nombre) => {
+  const key = tipo + "|" + String(nombre).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+  let h = 0x811c9dc5;
+  for (const b of new TextEncoder().encode(key)) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+};
+
+// El archivo depende solo de la lista (sin fecha), así se sabe si ya estaba al día.
+const CONF_HEAD = "// Respuestas de los invitados para la invitación (boda/index.html). Se genera con el botón\n" +
+  "// «Sincronizar lista con servidor» de la lista de invitados y solo guarda huellas: nunca nombres\n" +
+  "// ni enlaces. Con las dos listas vacías, la invitación se ve igual para todos.\n";
+function confirmadosJs(){
+  const of = estado => [...new Set(guests.filter(g => g.estado === estado).map(g => huella(g.tipo, g.nombre)))].sort();
+  const si = of("confirmada"), no = of("no_asiste").filter(h => !si.includes(h));
+  const arr = a => !a.length ? "[]" : "[\n" + Array.from({length: Math.ceil(a.length / 6)},
+    (_, i) => "    " + a.slice(i * 6, i * 6 + 6).map(h => '"' + h + '"').join(", ")).join(",\n") + "\n  ]";
+  return {si, no, text: CONF_HEAD + "window.CONFIRMADOS = {\n  si: " + arr(si) + ",\n  no: " + arr(no) + "\n};\n"};
+}
+
+// La clave (un token de GitHub con permiso solo sobre este repositorio) vive únicamente en este navegador:
+// no va en la lista exportada ni se muestra en pantalla.
+const KEY_TOKEN = "boda-gh-token", KEY_SYNC = "boda-gh-sync";
+let tokenMem = "";                                        // por si el navegador no deja guardar
+const getToken = () => { try { return localStorage.getItem(KEY_TOKEN) || tokenMem; } catch (e) { return tokenMem; } };
+const setToken = t => { tokenMem = t; try { if (t) localStorage.setItem(KEY_TOKEN, t); else localStorage.removeItem(KEY_TOKEN); } catch (e) {} };
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const fechaHora = d => d.getDate() + " de " + MESES[d.getMonth()] + " de " + d.getFullYear() + ", " + ((d.getHours() + 11) % 12 + 1) + ":" +
+  String(d.getMinutes()).padStart(2, "0") + (d.getHours() < 12 ? " a. m." : " p. m.");
+function renderSync(){
+  const last = load(KEY_SYNC, null), ok = !!(last && last.at && !isNaN(new Date(last.at)));
+  $("syncLast").hidden = !ok;
+  if (ok) $("syncLast").textContent = "Última sincronización: " + fechaHora(new Date(last.at)) +
+    " (" + count(last.si | 0, "confirmada", "confirmadas") + ", " + (last.no | 0) + " no " + ((last.no | 0) === 1 ? "asistirá" : "asistirán") + ")";
+  $("keyChange").hidden = !getToken();
+}
+
+const API = "https://api.github.com/repos/calebbarrios99/calebbarrios99.github.io/contents/boda/confirmados.js";
+const toB64 = text => { let s = ""; for (const b of new TextEncoder().encode(text)) s += String.fromCharCode(b); return btoa(s); };
+const fromB64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(String(b64 || "").replace(/\s/g, "")), c => c.charCodeAt(0)));
+async function gh(method, token, body){
+  const r = await fetch(method === "GET" ? API + "?ref=main" : API, {
+    method, cache: "no-store",                            // siempre el archivo actual, nunca uno guardado en caché
+    headers: Object.assign({Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"},
+      body ? {"Content-Type": "application/json"} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let json = null; try { json = await r.json(); } catch (e) {}
+  return {status: r.status, json};
+}
+// Lee el archivo (para conocer su versión, «sha») y lo reemplaza. Si no existe, lo crea. Si alguien lo cambió
+// entre la lectura y la escritura, GitHub responde 409 o 422: se lee de nuevo y se reintenta una vez.
+async function pushConfirmados(token, text){
+  for (let intento = 0; intento < 2; intento++) {
+    const cur = await gh("GET", token);
+    if (cur.status !== 200 && cur.status !== 404) throw {status: cur.status};
+    const sha = cur.status === 200 && cur.json && cur.json.sha || undefined;
+    if (sha) { let same = false; try { same = fromB64(cur.json.content) === text; } catch (e) {} if (same) return "igual"; }
+    const put = await gh("PUT", token, Object.assign({message: "Sincronizar confirmados", content: toB64(text), branch: "main"}, sha ? {sha} : {}));
+    if (put.status === 200 || put.status === 201) return "ok";
+    if ((put.status === 409 || put.status === 422) && intento === 0) continue;
+    throw {status: put.status, put: true};
+  }
+}
+let syncing = false, syncAfterKey = false;
+async function sync(){
+  if (syncing) return;
+  const token = getToken();
+  if (!token) return openKey("Para sincronizar, guarda primero la clave de GitHub.", true);
+  const offline = "No se pudo conectar con GitHub. Revisa tu conexión a internet e inténtalo de nuevo.";
+  if (navigator.onLine === false) return toast(offline, "", 5000);
+  const {si, no, text} = confirmadosJs(), btn = $("syncBtn");
+  syncing = true; btn.disabled = true; btn.textContent = "Sincronizando…";
+  try {
+    const r = await pushConfirmados(token, text);
+    save(KEY_SYNC, {at: new Date().toISOString(), si: si.length, no: no.length}); renderSync();
+    if (r === "igual") toast("La invitación ya estaba al día: no había cambios por enviar.", "ok", 4500);
+    else toast("Lista sincronizada ✓ La invitación se actualiza en unos minutos", "ok bare", 5000);
+  } catch (e) {
+    const st = e && e.status;
+    if (st === 401 || st === 403 || (st === 404 && e.put)) {
+      toast("La clave de GitHub no es válida o no tiene permiso para guardar. Escribe una nueva.", "", 5000);
+      openKey("La clave guardada no funcionó: puede haber vencido o no tener permiso de escritura. Escribe una nueva.", true, true);
+    }
+    else if (!st) toast(offline, "", 5000);
+    else toast("No se pudo sincronizar (error " + st + "). Inténtalo de nuevo en un momento.", "", 5000);
+  } finally { syncing = false; btn.disabled = false; btn.textContent = "Sincronizar lista con servidor"; }
+}
+function openKey(msg, thenSync, isError){
+  syncAfterKey = !!thenSync;
+  const m = $("keyMsg"); m.textContent = msg || ""; m.hidden = !msg; m.className = isError ? "err" : "hint";
+  $("ghToken").value = ""; $("keyForget").hidden = !getToken();
+  $("keyPanel").hidden = false; $("keyPanel").scrollIntoView({block: "nearest"}); $("ghToken").focus();
+}
+function closeKey(){ $("keyPanel").hidden = true; $("ghToken").value = ""; syncAfterKey = false; }
+$("keyPanel").addEventListener("submit", e => {
+  e.preventDefault();
+  const t = $("ghToken").value.trim();
+  if (!t) { const m = $("keyMsg"); m.textContent = "Pega aquí la clave de GitHub."; m.className = "err"; m.hidden = false; $("ghToken").focus(); return; }
+  const then = syncAfterKey;
+  setToken(t); closeKey(); renderSync();
+  if (then) sync(); else toast("Clave guardada en este navegador", "ok");
+});
+$("keyCancel").onclick = closeKey;
+$("keyForget").onclick = () => { setToken(""); closeKey(); renderSync(); toast("Se borró la clave de este navegador"); };
+$("keyChange").onclick = () => openKey("", false);
+$("syncBtn").onclick = sync;
 
 render();
 </script>
